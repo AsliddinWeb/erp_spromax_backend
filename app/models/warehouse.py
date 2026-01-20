@@ -2,6 +2,7 @@ from sqlalchemy import Column, String, ForeignKey, Numeric, DateTime, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from app.models.base import BaseModel
+from app.models.user import User  # BU QATORNI QO'SHING
 
 
 class Supplier(BaseModel):
