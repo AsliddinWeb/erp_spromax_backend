@@ -38,6 +38,10 @@ from app.models.sales import (
     OrderItem,
     Payment
 )
+from app.models.finance import (
+    TransactionCategory,
+    FinancialTransaction
+)
 
 # this is the Alembic Config object
 config = context.config
