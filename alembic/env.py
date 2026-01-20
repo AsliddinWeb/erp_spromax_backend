@@ -32,6 +32,12 @@ from app.models.production import (
     ShiftHandover,
     FinishedProductStock
 )
+from app.models.sales import (
+    Customer,
+    Order,
+    OrderItem,
+    Payment
+)
 
 # this is the Alembic Config object
 config = context.config
