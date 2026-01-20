@@ -19,6 +19,19 @@ from app.models.warehouse import (
     WarehouseStock,
     MaterialRequest
 )
+from app.models.production import (
+    ProductionLine,
+    Machine,
+    FinishedProduct,
+    Shift,
+    ShiftMachine,
+    ProductionRecord,
+    ProductionOutput,
+    DefectReason,
+    DefectiveProduct,
+    ShiftHandover,
+    FinishedProductStock
+)
 
 # this is the Alembic Config object
 config = context.config
