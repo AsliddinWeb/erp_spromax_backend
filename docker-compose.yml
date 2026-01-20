@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: promax_db
+    environment:
+      POSTGRES_USER: promax_user
+      POSTGRES_PASSWORD: promax_pass
+      POSTGRES_DB: promax_erp
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - promax_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: promax_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - promax_network
+
+  api:
+    build: .
+    container_name: promax_api
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DATABASE_URL=postgresql://promax_user:promax_pass@db:5432/promax_erp
+      - REDIS_URL=redis://redis:6379/0
+    networks:
+      - promax_network
+
+  celery_worker:
+    build: .
+    container_name: promax_celery
+    command: celery -A app.tasks.celery_app worker --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DATABASE_URL=postgresql://promax_user:promax_pass@db:5432/promax_erp
+      - REDIS_URL=redis://redis:6379/0
+    networks:
+      - promax_network
+
+  celery_beat:
+    build: .
+    container_name: promax_celery_beat
+    command: celery -A app.tasks.celery_app beat --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DATABASE_URL=postgresql://promax_user:promax_pass@db:5432/promax_erp
+      - REDIS_URL=redis://redis:6379/0
+    networks:
+      - promax_network
+
+volumes:
+  postgres_data:
+
+networks:
+  promax_network:
+    driver: bridge
