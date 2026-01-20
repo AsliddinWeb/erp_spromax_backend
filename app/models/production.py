@@ -34,7 +34,7 @@ class Machine(BaseModel):
     # Relationships
     production_line = relationship("ProductionLine", back_populates="machines")
     shift_machines = relationship("ShiftMachine", back_populates="machine")
-    maintenance_requests = relationship("MaintenanceRequest", back_populates="machine")
+    # maintenance_requests = relationship("MaintenanceRequest", back_populates="machine")
     
     def __repr__(self):
         return f"<Machine {self.name}>"
