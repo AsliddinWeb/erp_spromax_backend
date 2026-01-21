@@ -42,6 +42,13 @@ from app.models.finance import (
     TransactionCategory,
     FinancialTransaction
 )
+from app.models.hr import (
+    Department,
+    Employee,
+    Attendance,
+    SalaryPayment,
+    LeaveRequest
+)
 
 # this is the Alembic Config object
 config = context.config
