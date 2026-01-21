@@ -49,6 +49,13 @@ from app.models.hr import (
     SalaryPayment,
     LeaveRequest
 )
+from app.models.maintenance import (
+    MaintenanceRequest,
+    MaintenanceLog,
+    SparePart,
+    SparePartUsage,
+    MaintenanceSchedule
+)
 
 # this is the Alembic Config object
 config = context.config
