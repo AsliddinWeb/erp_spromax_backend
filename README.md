@@ -199,6 +199,91 @@ Access Swagger UI at http://localhost:8000/docs for interactive API testing.
 - ✅ Error Handling
 - ✅ Database Migrations
 
+## 🐳 Docker bilan ishga tushirish
+
+### Prerequisites
+- Docker 20.10+
+- Docker Compose V2
+
+### Quick Start
+
+1. **Start services**
+```bash
+chmod +x start.sh
+./start.sh
+```
+
+Yoki qo'lda:
+```bash
+# Build
+docker compose build
+
+# Start
+docker compose up -d
+
+# Migrations
+docker compose exec api alembic upgrade head
+
+# Seed data
+make seed
+```
+
+2. **Access API**
+- Swagger UI: http://localhost:8000/docs
+- Health Check: http://localhost:8000/health
+
+3. **View logs**
+```bash
+make logs
+# or
+docker compose logs -f api
+```
+
+4. **Stop services**
+```bash
+./stop.sh
+# or
+docker compose down
+```
+
+### Useful Commands
+```bash
+# Show running containers
+make ps
+docker compose ps
+
+# Access API container shell
+make shell
+docker compose exec api bash
+
+# Access database
+make db-shell
+docker compose exec db psql -U promax_user -d promax_erp
+
+# Restart services
+make restart
+docker compose restart
+
+# View all logs
+docker compose logs -f
+
+# Clean everything (including volumes)
+make clean
+docker compose down -v
+```
+
+### Development
+```bash
+# Rebuild without cache
+docker compose build --no-cache
+
+# Run in foreground (see logs)
+docker compose up
+
+# Restart single service
+docker compose restart api
+```
+
 ## 👨‍💻 Author
 
 **Asliddin** - Python Backend Developer & Programming Instructor

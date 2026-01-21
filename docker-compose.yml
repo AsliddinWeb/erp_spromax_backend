@@ -1,77 +1,80 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:15-alpine
     container_name: promax_db
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: promax_user
-      POSTGRES_PASSWORD: promax_pass
-      POSTGRES_DB: promax_erp
+      POSTGRES_USER: ${POSTGRES_USER:-promax_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-promax_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-promax_erp}
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - promax_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-promax_user} -d ${POSTGRES_DB:-promax_erp}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   redis:
     image: redis:7-alpine
     container_name: promax_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
     networks:
       - promax_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: promax_api
+    restart: unless-stopped
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - .:/app
     ports:
-      - "8000:8000"
+      - "${API_PORT:-8000}:8000"
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
-      - DATABASE_URL=postgresql://promax_user:promax_pass@db:5432/promax_erp
-      - REDIS_URL=redis://redis:6379/0
-    networks:
-      - promax_network
-
-  celery_worker:
-    build: .
-    container_name: promax_celery
-    command: celery -A app.tasks.celery_app worker --loglevel=info
-    volumes:
-      - .:/app
-    depends_on:
-      - db
-      - redis
-    environment:
-      - DATABASE_URL=postgresql://promax_user:promax_pass@db:5432/promax_erp
-      - REDIS_URL=redis://redis:6379/0
-    networks:
-      - promax_network
-
-  celery_beat:
-    build: .
-    container_name: promax_celery_beat
-    command: celery -A app.tasks.celery_app beat --loglevel=info
-    volumes:
-      - .:/app
-    depends_on:
-      - db
-      - redis
-    environment:
-      - DATABASE_URL=postgresql://promax_user:promax_pass@db:5432/promax_erp
-      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-promax_user}:${POSTGRES_PASSWORD:-promax_pass}@db:5432/${POSTGRES_DB:-promax_erp}
+      - REDIS_URL=redis://redis:${REDIS_PORT:-6379}/0
+      - SECRET_KEY=${SECRET_KEY}
+      - ALGORITHM=${ALGORITHM:-HS256}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      - REFRESH_TOKEN_EXPIRE_DAYS=${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      - API_V1_PREFIX=${API_V1_PREFIX:-/api/v1}
+      - PROJECT_NAME=${PROJECT_NAME:-S PROMAX PLAST ERP}
+      - DEBUG=${DEBUG:-True}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      - DEFAULT_PAGE_SIZE=${DEFAULT_PAGE_SIZE:-20}
+      - MAX_PAGE_SIZE=${MAX_PAGE_SIZE:-100}
     networks:
       - promax_network
 
 volumes:
   postgres_data:
+    driver: local
+  redis_data:
+    driver: local
 
 networks:
   promax_network:

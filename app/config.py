@@ -3,11 +3,6 @@ from typing import List
 
 
 class Settings(BaseSettings):
-    # Project
-    PROJECT_NAME: str = "S PROMAX PLAST ERP"
-    API_V1_PREFIX: str = "/api/v1"
-    DEBUG: bool = True
-    
     # Database
     DATABASE_URL: str
     DATABASE_POOL_SIZE: int = 20
@@ -18,29 +13,30 @@ class Settings(BaseSettings):
     # JWT
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
-    # CORS
-    ALLOWED_ORIGINS: str = "http://localhost:3000"
+    # API
+    API_V1_PREFIX: str = "/api/v1"
+    PROJECT_NAME: str = "S PROMAX PLAST ERP"
+    DEBUG: bool = True
     
-    @property
-    def allowed_origins_list(self) -> List[str]:
-        return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",")]
+    # CORS
+    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:5173"
     
     # Pagination
     DEFAULT_PAGE_SIZE: int = 20
     MAX_PAGE_SIZE: int = 100
     
-    # Email (optional)
-    SMTP_HOST: str = ""
-    SMTP_PORT: int = 587
-    SMTP_USER: str = ""
-    SMTP_PASSWORD: str = ""
+    @property
+    def allowed_origins_list(self) -> List[str]:
+        """CORS origins ro'yxatini qaytaradi"""
+        return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",")]
     
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "allow"
 
 
 settings = Settings()
