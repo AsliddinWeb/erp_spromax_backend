@@ -80,9 +80,9 @@ def seed_all_data():
         else:
             # RawMaterial modelida faqat: name, description, unit, minimum_stock, supplier_id bor
             materials_data = [
-                {"name": "PVC Resin SG-5", "unit": "kg", "supplier_id": first_supplier.id},
-                {"name": "Calcium Carbonate", "unit": "kg", "supplier_id": first_supplier.id},
-                {"name": "Heat Stabilizer", "unit": "kg", "supplier_id": first_supplier.id}
+                {"name": "PVC Resin SG-5", "unit": "kg"},
+                {"name": "Calcium Carbonate", "unit": "kg"},
+                {"name": "Heat Stabilizer", "unit": "kg"}
             ]
             
             created_count = 0
