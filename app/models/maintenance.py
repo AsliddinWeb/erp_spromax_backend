@@ -104,7 +104,7 @@ class MaintenanceSchedule(BaseModel):
     interval_days = Column(Integer, nullable=False)  # Har necha kunda
     last_maintenance_date = Column(Date, nullable=True)
     next_maintenance_date = Column(Date, nullable=True)
-    is_active = Column(String(20), nullable=False, default='active')  # active, inactive
+    # is_active = Column(String(20), nullable=False, default='active')  # active, inactive
     
     # Relationships
     machine = relationship("Machine")

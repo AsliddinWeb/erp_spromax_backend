@@ -38,7 +38,7 @@ from app.repositories.maintenance_repository import MaintenanceRequestRepository
 class AnalyticsService:
     def __init__(self, db: Session):
         self.db = db
-        
+
         # Services
         self.sales_service = SalesService(db)
         self.production_service = ProductionService(db)
@@ -46,7 +46,7 @@ class AnalyticsService:
         self.hr_service = HRService(db)
         self.warehouse_service = WarehouseService(db)
         self.maintenance_service = MaintenanceService(db)
-        
+
         # Repositories
         self.customer_repo = CustomerRepository(db)
         self.order_repo = OrderRepository(db)
@@ -63,15 +63,15 @@ class AnalyticsService:
         self.finished_stock_repo = FinishedProductStockRepository(db)
         self.maintenance_repo = MaintenanceRequestRepository(db)
         self.spare_part_repo = SparePartRepository(db)
-    
+
     # ============ DASHBOARD METHODS ============
-    
+
     def get_dashboard_overview(self) -> DashboardOverview:
         """Asosiy dashboard ma'lumotlari"""
         # HR
         total_employees = self.employee_repo.count()
         active_employees = self.employee_repo.get_active_count()
-        
+
         # Sales
         total_customers = self.customer_repo.count()
         total_orders = self.order_repo.count()
@@ -79,31 +79,32 @@ class AnalyticsService:
         total_revenue = self.order_repo.get_total_revenue()
         revenue_today = self.order_repo.get_revenue_today()
         revenue_this_month = self._get_revenue_this_month()
-        
+
         # Production
         total_production_lines = self.production_line_repo.count()
         active_shifts = len(self.shift_repo.get_active_shifts())
         total_output_today = self.output_repo.get_total_output_today()
         total_defects_today = self.defect_repo.get_total_defects_today()
-        
+
         # Finance
         total_income = self.transaction_repo.get_total_by_type('income')
         total_expense = self.transaction_repo.get_total_by_type('expense')
         net_profit = total_income - total_expense
-        
+
         # Warehouse
         total_raw_materials = self.raw_material_repo.count()
-        low_stock_materials = len(self.warehouse_stock_repo.get_low_stock())
-        
+        # BUG FIX #1: get_low_stock() → get_low_stock_items()
+        low_stock_materials = len(self.warehouse_stock_repo.get_low_stock_items())
+
         # Suppliers
         from app.repositories.warehouse_repository import SupplierRepository
         total_suppliers = SupplierRepository(self.db).count()
-        
+
         # Maintenance
         pending_maintenance = self.maintenance_repo.get_count_by_status('pending')
         machines_under_maintenance = self.maintenance_repo.get_count_by_status('in_progress')
         low_stock_spare_parts = self.spare_part_repo.get_low_stock_count()
-        
+
         return DashboardOverview(
             total_employees=total_employees,
             active_employees=active_employees,
@@ -127,53 +128,37 @@ class AnalyticsService:
             machines_under_maintenance=machines_under_maintenance,
             low_stock_spare_parts=low_stock_spare_parts
         )
-    
+
     # ============ SALES ANALYTICS ============
-    
+
     def get_sales_analytics(self, start_date: date, end_date: date) -> SalesAnalytics:
-        """Sotuv tahlili"""
-        from app.models.sales import Order
-        
-        orders = self.order_repo.get_all_with_relations(
-            skip=0,
-            limit=10000,
-            payment_status=None,
-            delivery_status=None
-        )
-        
-        # Filter by date
-        period_orders = [
-            o for o in orders
-            if start_date <= o.order_date.date() <= end_date
-        ]
-        
-        total_orders = len(period_orders)
-        total_revenue = sum(o.total_amount for o in period_orders)
-        total_paid = sum(o.paid_amount for o in period_orders)
-        total_unpaid = total_revenue - total_paid
-        average_order_value = total_revenue / total_orders if total_orders > 0 else Decimal("0")
-        
+        """Sotuv tahlili — barcha hisob-kitob DB da bajariladi (N+1 yo'q)"""
+
+        # BUG FIX #8: 10,000 order Python da yuklab filter qilish o'rniga
+        # barcha aggregatlar bitta DB query da hisoblanadi
+        data = self.order_repo.get_analytics_by_period(start_date, end_date)
+
         return SalesAnalytics(
             period_start=start_date,
             period_end=end_date,
-            total_orders=total_orders,
-            total_revenue=total_revenue,
-            total_paid=total_paid,
-            total_unpaid=total_unpaid,
-            average_order_value=average_order_value,
-            top_customers=[],
-            top_products=[],
-            sales_by_day=[]
+            total_orders=data["total_orders"],
+            total_revenue=data["total_revenue"],
+            total_paid=data["total_paid"],
+            total_unpaid=data["total_unpaid"],
+            average_order_value=data["average_order_value"],
+            top_customers=data["top_customers"],
+            top_products=data["top_products"],
+            sales_by_day=data["sales_by_day"]
         )
-    
+
     # ============ PRODUCTION ANALYTICS ============
-    
+
     def get_production_analytics(self, start_date: date, end_date: date) -> ProductionAnalytics:
         """Ishlab chiqarish tahlili"""
         total_shifts = 0
         total_output = Decimal("0")
         total_defects = Decimal("0")
-        
+
         # Soddalashtirilgan versiya
         return ProductionAnalytics(
             period_start=start_date,
@@ -187,22 +172,22 @@ class AnalyticsService:
             production_by_day=[],
             top_defect_reasons=[]
         )
-    
+
     # ============ FINANCE ANALYTICS ============
-    
+
     def get_finance_analytics(self, start_date: date, end_date: date) -> FinanceAnalytics:
         """Moliya tahlili"""
         start_datetime = datetime.combine(start_date, datetime.min.time())
         end_datetime = datetime.combine(end_date, datetime.max.time())
-        
+
         total_income = self.transaction_repo.get_total_by_type('income', start_datetime, end_datetime)
         total_expense = self.transaction_repo.get_total_by_type('expense', start_datetime, end_datetime)
         net_profit = total_income - total_expense
         profit_margin = (net_profit / total_income * 100) if total_income > 0 else Decimal("0")
-        
+
         income_by_category = self.transaction_repo.get_income_by_category(start_datetime, end_datetime)
         expense_by_category = self.transaction_repo.get_expense_by_category(start_datetime, end_datetime)
-        
+
         return FinanceAnalytics(
             period_start=start_date,
             period_end=end_date,
@@ -214,22 +199,22 @@ class AnalyticsService:
             expense_by_category=expense_by_category,
             monthly_trend=[]
         )
-    
+
     # ============ HR ANALYTICS ============
-    
+
     def get_hr_analytics(self) -> HRAnalytics:
         """HR tahlili"""
         from app.repositories.hr_repository import SalaryPaymentRepository, LeaveRequestRepository
-        
+
         total_employees = self.employee_repo.count()
         active_employees = self.employee_repo.get_active_count()
-        
+
         salary_repo = SalaryPaymentRepository(self.db)
         total_salary_paid = salary_repo.get_total_paid_this_month()
-        
+
         leave_repo = LeaveRequestRepository(self.db)
         on_leave = leave_repo.get_on_leave_today(date.today())
-        
+
         return HRAnalytics(
             total_employees=total_employees,
             active_employees=active_employees,
@@ -240,17 +225,18 @@ class AnalyticsService:
             total_salary_paid_this_month=total_salary_paid,
             leave_requests_by_type=[]
         )
-    
+
     # ============ INVENTORY ANALYTICS ============
-    
+
     def get_inventory_analytics(self) -> InventoryAnalytics:
         """Inventarizatsiya tahlili"""
         total_raw_materials = self.raw_material_repo.count()
-        low_stock_materials = len(self.warehouse_stock_repo.get_low_stock())
-        
+        # BUG FIX #1: get_low_stock() → get_low_stock_items()
+        low_stock_materials = len(self.warehouse_stock_repo.get_low_stock_items())
+
         total_spare_parts = self.spare_part_repo.count()
         low_stock_spare_parts = self.spare_part_repo.get_low_stock_count()
-        
+
         return InventoryAnalytics(
             total_raw_materials=total_raw_materials,
             low_stock_materials=low_stock_materials,
@@ -263,20 +249,20 @@ class AnalyticsService:
             low_stock_spare_parts=low_stock_spare_parts,
             total_spare_parts_value=Decimal("0")
         )
-    
+
     # ============ MAINTENANCE ANALYTICS ============
-    
+
     def get_maintenance_analytics(self, start_date: date, end_date: date) -> MaintenanceAnalytics:
         """Texnik xizmat tahlili"""
         from app.repositories.maintenance_repository import MaintenanceLogRepository
-        
+
         total_requests = self.maintenance_repo.count()
         pending_requests = self.maintenance_repo.get_count_by_status('pending')
         completed_requests = self.maintenance_repo.get_count_by_status('completed')
-        
+
         log_repo = MaintenanceLogRepository(self.db)
         total_hours = log_repo.get_total_hours()
-        
+
         return MaintenanceAnalytics(
             period_start=start_date,
             period_end=end_date,
@@ -289,38 +275,85 @@ class AnalyticsService:
             requests_by_priority=[],
             machines_most_maintained=[]
         )
-    
+
     # ============ KPI METHODS ============
-    
+
     def get_kpi_metrics(self) -> KPIMetrics:
-        """Asosiy KPI ko'rsatkichlari"""
+        """Asosiy KPI ko'rsatkichlari — real ma'lumotlardan hisoblanadi"""
+        # BUG FIX #4: Hardcoded qiymatlar o'rniga real hisob-kitob
+
+        today = date.today()
+        month_start = today.replace(day=1)
+        last_month_start = (month_start - timedelta(days=1)).replace(day=1)
+        last_month_end = month_start - timedelta(days=1)
+
+        # Sales growth rate (joriy oy vs o'tgan oy)
+        current_month_revenue = self._get_revenue_for_period(month_start, today)
+        last_month_revenue = self._get_revenue_for_period(last_month_start, last_month_end)
+
+        if last_month_revenue > 0:
+            sales_growth_rate = (
+                    (current_month_revenue - last_month_revenue) / last_month_revenue * 100
+            )
+        else:
+            sales_growth_rate = Decimal("0")
+
+        # Average order value
+        total_orders = self.order_repo.count()
+        total_revenue = self.order_repo.get_total_revenue()
+        average_order_value = total_revenue / total_orders if total_orders > 0 else Decimal("0")
+
+        # Finance
+        start_dt = datetime.combine(month_start, datetime.min.time())
+        end_dt = datetime.now()
+        total_income = self.transaction_repo.get_total_by_type('income', start_dt, end_dt)
+        total_expense = self.transaction_repo.get_total_by_type('expense', start_dt, end_dt)
+        net_profit = total_income - total_expense
+        profit_margin = (net_profit / total_income * 100) if total_income > 0 else Decimal("0")
+        expense_ratio = (total_expense / total_income * 100) if total_income > 0 else Decimal("0")
+
         return KPIMetrics(
-            sales_growth_rate=Decimal("15.5"),
-            customer_retention_rate=Decimal("85.0"),
-            average_order_value=Decimal("5000000"),
-            production_efficiency=Decimal("87.5"),
-            defect_rate=Decimal("2.3"),
-            machine_uptime=Decimal("92.0"),
-            profit_margin=Decimal("18.5"),
-            revenue_growth_rate=Decimal("12.3"),
-            expense_ratio=Decimal("75.0"),
-            employee_retention_rate=Decimal("90.0"),
-            attendance_rate=Decimal("95.5"),
-            inventory_turnover=Decimal("6.5"),
-            stockout_rate=Decimal("1.5")
+            sales_growth_rate=round(sales_growth_rate, 2),
+            customer_retention_rate=Decimal("85.0"),  # TODO: haqiqiy hisob
+            average_order_value=round(average_order_value, 2),
+            production_efficiency=Decimal("87.5"),  # TODO: shift ma'lumotlaridan
+            defect_rate=Decimal("2.3"),  # TODO: defect_repo dan
+            machine_uptime=Decimal("92.0"),  # TODO: maintenance_repo dan
+            profit_margin=round(profit_margin, 2),
+            revenue_growth_rate=round(sales_growth_rate, 2),
+            expense_ratio=round(expense_ratio, 2),
+            employee_retention_rate=Decimal("90.0"),  # TODO: hr_repo dan
+            attendance_rate=Decimal("95.5"),  # TODO: attendance_repo dan
+            inventory_turnover=Decimal("6.5"),  # TODO: warehouse_repo dan
+            stockout_rate=Decimal("1.5")  # TODO: low_stock / total dan
         )
-    
+
     # ============ PRIVATE HELPER METHODS ============
-    
+
     def _get_revenue_this_month(self) -> Decimal:
         """Oy boshidan daromad"""
         month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        
+
         from app.models.sales import Order
-        
+
         result = self.db.query(func.sum(Order.total_amount)).filter(
             Order.order_date >= month_start,
             Order.is_active == True
         ).scalar()
-        
+
+        return result or Decimal("0")
+
+    def _get_revenue_for_period(self, start: date, end: date) -> Decimal:
+        """Berilgan davr uchun daromad"""
+        from app.models.sales import Order
+
+        start_dt = datetime.combine(start, datetime.min.time())
+        end_dt = datetime.combine(end, datetime.max.time())
+
+        result = self.db.query(func.sum(Order.total_amount)).filter(
+            Order.order_date >= start_dt,
+            Order.order_date <= end_dt,
+            Order.is_active == True
+        ).scalar()
+
         return result or Decimal("0")
