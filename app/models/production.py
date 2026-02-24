@@ -12,7 +12,7 @@ class ProductionLine(BaseModel):
     
     name = Column(String(100), nullable=False, unique=True)
     description = Column(Text, nullable=True)
-    capacity_per_hour = Column(Numeric(10, 2), nullable=True)  # Soatiga ishlab chiqarish quvvati (kg)
+    capacity_per_hour = Column(Numeric(10, 2), nullable=True)
     
     # Relationships
     machines = relationship("Machine", back_populates="production_line")
@@ -29,12 +29,13 @@ class Machine(BaseModel):
     name = Column(String(100), nullable=False)
     serial_number = Column(String(100), nullable=True, unique=True)
     production_line_id = Column(UUID(as_uuid=True), ForeignKey('production_lines.id'), nullable=False)
-    status = Column(String(20), nullable=False, default='active')  # active, maintenance, broken
+    status = Column(String(20), nullable=False, default='active')
     
     # Relationships
     production_line = relationship("ProductionLine", back_populates="machines")
     shift_machines = relationship("ShiftMachine", back_populates="machine")
-    maintenance_requests = relationship("MaintenanceRequest", back_populates="machine")
+    # Bu relationship'ni `app.models.maintenance` modulida yaratamiz
+    maintenance_requests = relationship("MaintenanceRequest", back_populates="machine", lazy="dynamic")
     
     def __repr__(self):
         return f"<Machine {self.name}>"
@@ -46,8 +47,8 @@ class FinishedProduct(BaseModel):
     
     name = Column(String(200), nullable=False)
     description = Column(Text, nullable=True)
-    unit = Column(String(20), nullable=False)  # kg, metr, dona, etc.
-    standard_price = Column(Numeric(10, 2), nullable=True)  # Standart narx
+    unit = Column(String(20), nullable=False)
+    standard_price = Column(Numeric(10, 2), nullable=True)
     
     # Relationships
     production_outputs = relationship("ProductionOutput", back_populates="finished_product")
@@ -65,17 +66,17 @@ class Shift(BaseModel):
     operator_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
     start_time = Column(DateTime, nullable=False)
     end_time = Column(DateTime, nullable=True)
-    status = Column(String(20), nullable=False, default='active')  # active, completed
+    status = Column(String(20), nullable=False, default='active')
     notes = Column(Text, nullable=True)
     
     # Relationships
     production_line = relationship("ProductionLine", back_populates="shifts")
     operator = relationship("User", foreign_keys=[operator_id])
-    shift_machines = relationship("ShiftMachine", back_populates="shift")
-    production_records = relationship("ProductionRecord", back_populates="shift")
-    production_outputs = relationship("ProductionOutput", back_populates="shift")
-    defective_products = relationship("DefectiveProduct", back_populates="shift")
-    shift_handover = relationship("ShiftHandover", back_populates="shift", uselist=False)
+    shift_machines = relationship("ShiftMachine", back_populates="shift", cascade="all, delete-orphan")
+    production_records = relationship("ProductionRecord", back_populates="shift", cascade="all, delete-orphan")
+    production_outputs = relationship("ProductionOutput", back_populates="shift", cascade="all, delete-orphan")
+    defective_products = relationship("DefectiveProduct", back_populates="shift", cascade="all, delete-orphan")
+    shift_handover = relationship("ShiftHandover", back_populates="shift", uselist=False, cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<Shift {self.id}: {self.status}>"
@@ -189,9 +190,9 @@ class FinishedProductStock(BaseModel):
     __tablename__ = "finished_product_stock"
     
     finished_product_id = Column(UUID(as_uuid=True), ForeignKey('finished_products.id'), nullable=False, unique=True)
-    quantity_total = Column(Numeric(10, 2), nullable=False, default=0)  # Umumiy
-    quantity_available = Column(Numeric(10, 2), nullable=False, default=0)  # Sotishga tayyor
-    quantity_reserved = Column(Numeric(10, 2), nullable=False, default=0)  # Buyurtmalarda band
+    quantity_total = Column(Numeric(10, 2), nullable=False, default=0)
+    quantity_available = Column(Numeric(10, 2), nullable=False, default=0)
+    quantity_reserved = Column(Numeric(10, 2), nullable=False, default=0)
     last_updated = Column(DateTime, nullable=False)
     
     # Relationships

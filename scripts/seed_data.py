@@ -75,7 +75,7 @@ def create_superadmin(db):
     if not existing_admin:
         admin = User(
             username="admin",
-            email="admin@promax.uz",
+            email="admin@spromax.uz",
             full_name="System Administrator",
             hashed_password=get_password_hash("Admin123!"),
             role_id=superadmin_role.id
@@ -83,7 +83,7 @@ def create_superadmin(db):
         db.add(admin)
         db.commit()
         print("✅ Superadmin yaratildi")
-        print("   📧 Email: admin@promax.uz")
+        print("   📧 Email:    admin@spromax.uz")
         print("   👤 Username: admin")
         print("   🔑 Password: Admin123!")
     else:
@@ -102,9 +102,19 @@ def seed_data():
         print()
         create_superadmin(db)
         print("\n✅ Seed data tugadi!\n")
+        print("=" * 60)
+        print("📝 LOGIN CREDENTIALS:")
+        print("=" * 60)
+        print("   Email:    admin@spromax.uz")
+        print("   Username: admin")
+        print("   Password: Admin123!")
+        print("=" * 60)
+        print("\n💡 Login qilish uchun username='admin' ishlatiladi\n")
         
     except Exception as e:
         print(f"\n❌ Xatolik: {e}\n")
+        import traceback
+        traceback.print_exc()
         db.rollback()
     finally:
         db.close()
