@@ -15,6 +15,12 @@ echo "📊 Creating tables..."
 docker compose exec api alembic upgrade head
 
 echo "🌱 Seeding data..."
-docker compose exec api python scripts/seed_all_data.py
+docker compose exec api python  scripts/seed_data.py
+docker compose exec api python  scripts/seed_warehouse_data.py
+docker compose exec api python  scripts/seed_production_data.py
+docker compose exec api python  scripts/seed_sales_data.py
+docker compose exec api python  scripts/seed_finance_data.py
+docker compose exec api python  scripts/seed_hr_data.py
+docker compose exec api python  scripts/seed_maintenance_data.py
 
 echo "✅ Database reset complete!"
