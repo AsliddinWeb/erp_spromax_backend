@@ -5,6 +5,8 @@ from decimal import Decimal
 
 sys.path.append(str(Path(__file__).parent.parent))
 
+import app.models.maintenance  # noqa
+
 from app.database import SessionLocal
 from app.models.sales import Customer
 
