@@ -12,8 +12,8 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
+        token: str = Depends(oauth2_scheme),
+        db: Session = Depends(get_db)
 ) -> User:
     """
     Joriy foydalanuvchini olish
@@ -27,19 +27,20 @@ def require_permission(permission: PermissionType):
     """
     Permission talab qilish (decorator)
     """
+
     async def permission_checker(
-        current_user: User = Depends(get_current_user)
+            current_user: User = Depends(get_current_user)
     ):
-        user_role = UserRole(current_user.role.name)
-        
+        user_role = UserRole(current_user.role.name.lower())
+
         if not has_permission(user_role, permission):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Sizda bu amalni bajarish uchun ruxsat yo'q"
             )
-        
+
         return current_user
-    
+
     return permission_checker
 
 
@@ -47,15 +48,16 @@ def require_role(role: UserRole):
     """
     Role talab qilish (decorator)
     """
+
     async def role_checker(
-        current_user: User = Depends(get_current_user)
+            current_user: User = Depends(get_current_user)
     ):
-        if current_user.role.name != role.value:
+        if current_user.role.name.lower() != role.value.lower():
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Sizda bu amalni bajarish uchun ruxsat yo'q"
             )
-        
+
         return current_user
-    
+
     return role_checker
