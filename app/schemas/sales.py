@@ -1,12 +1,23 @@
 from typing import Optional, List
-from pydantic import Field, EmailStr, field_validator
 from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
+
+from pydantic import Field, EmailStr, field_validator, ConfigDict, BaseModel
+
 from app.schemas.base import BaseSchema, BaseIDSchema
 
 
-# ============ CUSTOMER SCHEMAS ============
+# ================= USER SHORT =================
+
+class UserShort(BaseModel):
+    id: UUID
+    username: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ================= CUSTOMER =================
 
 class CustomerBase(BaseSchema):
     name: str = Field(..., min_length=1, max_length=200)
@@ -16,12 +27,12 @@ class CustomerBase(BaseSchema):
     address: Optional[str] = None
     inn: Optional[str] = Field(None, min_length=9, max_length=9)
     customer_type: str = Field(default="regular", pattern="^(regular|wholesale|vip)$")
-    
+
     @field_validator('inn')
     @classmethod
     def validate_inn(cls, v):
         if v and not v.isdigit():
-            raise ValueError('INN faqat raqamlardan iborat bo\'lishi kerak')
+            raise ValueError("INN faqat raqamlardan iborat bo‘lishi kerak")
         return v
 
 
@@ -43,8 +54,10 @@ class CustomerResponse(BaseIDSchema, CustomerBase):
     total_orders: Optional[int] = 0
     total_spent: Optional[Decimal] = Decimal("0")
 
+    model_config = ConfigDict(from_attributes=True)
 
-# ============ ORDER ITEM SCHEMAS ============
+
+# ================= ORDER ITEMS =================
 
 class OrderItemBase(BaseSchema):
     finished_product_id: UUID
@@ -57,7 +70,7 @@ class OrderItemCreate(OrderItemBase):
     @classmethod
     def validate_positive(cls, v):
         if v <= 0:
-            raise ValueError('Qiymat musbat bo\'lishi kerak')
+            raise ValueError("Qiymat musbat bo‘lishi kerak")
         return v
 
 
@@ -69,8 +82,10 @@ class OrderItemResponse(BaseIDSchema):
     total_price: Decimal
     finished_product: Optional[dict] = None
 
+    model_config = ConfigDict(from_attributes=True)
 
-# ============ ORDER SCHEMAS ============
+
+# ================= ORDERS =================
 
 class OrderBase(BaseSchema):
     customer_id: UUID
@@ -102,17 +117,20 @@ class OrderResponse(BaseIDSchema):
     delivery_date: Optional[datetime] = None
     notes: Optional[str] = None
     created_by: UUID
+
     customer: Optional[CustomerResponse] = None
-    creator: Optional[dict] = None
-    order_items: List[OrderItemResponse] = []
-    
+    creator: Optional[UserShort] = None
+
+    order_items: List[OrderItemResponse] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
     @property
     def remaining_amount(self) -> Decimal:
-        """Qolgan to'lov"""
         return self.total_amount - self.paid_amount
 
 
-# ============ PAYMENT SCHEMAS ============
+# ================= PAYMENTS =================
 
 class PaymentBase(BaseSchema):
     amount: Decimal = Field(..., gt=0)
@@ -124,22 +142,24 @@ class PaymentBase(BaseSchema):
 
 class PaymentCreate(PaymentBase):
     order_id: UUID
-    
+
     @field_validator('amount')
     @classmethod
     def validate_amount(cls, v):
         if v <= 0:
-            raise ValueError('To\'lov summasi musbat bo\'lishi kerak')
+            raise ValueError("To‘lov summasi musbat bo‘lishi kerak")
         return v
 
 
 class PaymentResponse(BaseIDSchema, PaymentBase):
     order_id: UUID
     received_by: UUID
-    receiver: Optional[dict] = None
+    receiver: Optional[UserShort] = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 
-# ============ STATISTICS SCHEMAS ============
+# ================= STATISTICS =================
 
 class SalesStatistics(BaseSchema):
     total_customers: int
@@ -150,8 +170,9 @@ class SalesStatistics(BaseSchema):
     pending_orders: int
     completed_orders_today: int
     revenue_today: Decimal
-    top_customers: List[dict] = []
-    top_products: List[dict] = []
+
+    top_customers: List[dict] = Field(default_factory=list)
+    top_products: List[dict] = Field(default_factory=list)
 
 
 class CustomerStatistics(BaseSchema):
