@@ -217,7 +217,7 @@ class ProductionService:
             raise NotFoundException(detail="Mahsulot topilmadi")
 
         update_data = product_data.model_dump(exclude_unset=True)
-        return self.finished_product_repo.update(product, update_data)
+        return self.product_repo.update(product, update_data)
     
     def delete_finished_product(self, product_id: UUID) -> bool:
         """Tayyor mahsulot o'chirish"""
