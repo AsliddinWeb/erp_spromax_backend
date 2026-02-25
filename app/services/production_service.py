@@ -198,17 +198,26 @@ class ProductionService:
         """Barcha tayyor mahsulotlar"""
         return self.product_repo.get_all_with_stock(skip=skip, limit=limit)
     
+    # def update_finished_product(self, product_id: UUID, product_data: FinishedProductUpdate) -> FinishedProduct:
+    #     """Tayyor mahsulot yangilash"""
+    #     product = self.get_finished_product(product_id)
+    #
+    #     if product_data.name and product_data.name != product.name:
+    #         existing = self.product_repo.get_by_name(product_data.name)
+    #         if existing:
+    #             raise ConflictException(detail=f"'{product_data.name}' nomli mahsulot mavjud")
+    #
+    #     update_data = product_data.model_dump(exclude_unset=True)
+    #     return self.product_repo.update(product, update_data)
+
     def update_finished_product(self, product_id: UUID, product_data: FinishedProductUpdate) -> FinishedProduct:
         """Tayyor mahsulot yangilash"""
-        product = self.get_finished_product(product_id)
-        
-        if product_data.name and product_data.name != product.name:
-            existing = self.product_repo.get_by_name(product_data.name)
-            if existing:
-                raise ConflictException(detail=f"'{product_data.name}' nomli mahsulot mavjud")
-        
+        product = self.db.query(FinishedProduct).filter(FinishedProduct.id == product_id).first()
+        if not product:
+            raise NotFoundException(detail="Mahsulot topilmadi")
+
         update_data = product_data.model_dump(exclude_unset=True)
-        return self.product_repo.update(product, update_data)
+        return self.finished_product_repo.update(product, update_data)
     
     def delete_finished_product(self, product_id: UUID) -> bool:
         """Tayyor mahsulot o'chirish"""

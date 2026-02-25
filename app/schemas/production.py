@@ -72,6 +72,7 @@ class FinishedProductUpdate(BaseSchema):
     description: Optional[str] = None
     unit: Optional[str] = Field(None, min_length=1, max_length=20)
     standard_price: Optional[Decimal] = Field(None, ge=0)
+    is_active: Optional[bool] = None
 
 
 class FinishedProductResponse(BaseIDSchema, FinishedProductBase):
