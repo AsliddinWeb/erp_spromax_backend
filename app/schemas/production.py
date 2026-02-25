@@ -76,6 +76,27 @@ class FinishedProductResponse(BaseIDSchema, FinishedProductBase):
     current_stock: Optional[Decimal] = None
 
 
+# ============ OPERATOR INFO (Shift uchun) ============
+
+class OperatorInfo(BaseSchema):
+    id: UUID
+    username: str
+    full_name: Optional[str] = None
+    role: Optional[str] = None  # Role.name (string)
+
+    model_config = {"from_attributes": True}
+
+    @field_validator('role', mode='before')
+    @classmethod
+    def serialize_role(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str):
+            return v
+        # Role object kelsa .name ni olamiz
+        return getattr(v, 'name', None)
+
+
 # ============ SHIFT SCHEMAS ============
 
 class ShiftBase(BaseSchema):
@@ -101,25 +122,10 @@ class ShiftResponse(BaseIDSchema):
     status: str
     notes: Optional[str] = None
     production_line: Optional[ProductionLineResponse] = None
-    operator: Optional[object] = None
+    operator: Optional[OperatorInfo] = None
     machines: Optional[List[MachineResponse]] = None
 
-    model_config = {"from_attributes": True, "arbitrary_types_allowed": True}
-
-    @field_validator('operator', mode='before')
-    @classmethod
-    def serialize_operator(cls, v):
-        if v is None:
-            return None
-        if isinstance(v, dict):
-            return v
-        # User object kelsa dict ga aylantiramiz
-        return {
-            'id': str(v.id),
-            'username': getattr(v, 'username', None),
-            'full_name': getattr(v, 'full_name', None),
-            'role': getattr(v, 'role', None),
-        }
+    model_config = {"from_attributes": True}
 
 
 # ============ PRODUCTION RECORD SCHEMAS ============
