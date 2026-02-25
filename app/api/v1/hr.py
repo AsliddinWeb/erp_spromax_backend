@@ -244,6 +244,17 @@ async def delete_attendance(
 
 # ============ SALARY PAYMENT ENDPOINTS ============
 
+@router.get("/salary-payments", response_model=List[SalaryPaymentResponse])
+async def get_salary_payments(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission(PermissionType.READ_HR))
+):
+    """Barcha ish haqi to'lovlari"""
+    service = HRService(db)
+    return service.get_all_salary_payments(skip=skip, limit=limit)
+
 @router.post("/salary-payments", response_model=SalaryPaymentResponse, status_code=status.HTTP_201_CREATED)
 async def create_salary_payment(
     payment_data: SalaryPaymentCreate,

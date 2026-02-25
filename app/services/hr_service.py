@@ -235,6 +235,12 @@ class HRService:
     ) -> List[SalaryPayment]:
         """Xodim to'lovlari"""
         return self.salary_repo.get_by_employee(employee_id, skip=skip, limit=limit)
+
+    def get_all_salary_payments(self, skip: int = 0, limit: int = 100) -> List[SalaryPayment]:
+        """Barcha ish haqi to'lovlari"""
+        return self.db.query(SalaryPayment).order_by(
+            SalaryPayment.payment_date.desc()
+        ).offset(skip).limit(limit).all()
     
     # ============ LEAVE REQUEST METHODS ============
     
