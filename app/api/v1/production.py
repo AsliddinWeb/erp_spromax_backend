@@ -20,6 +20,8 @@ from app.schemas.production import (
     ShiftCreate,
     ShiftComplete,
     ShiftResponse,
+    ShiftCompleteRequest,
+
     # Production Record
     ProductionRecordCreate,
     ProductionRecordResponse,
@@ -290,8 +292,7 @@ async def get_shift(
 @router.put("/shifts/{shift_id}/complete", response_model=ShiftResponse)
 async def complete_shift(
     shift_id: UUID,
-    complete_data: ShiftComplete = Body(...),
-    handover_data: Optional[ShiftHandoverCreate] = Body(None),
+    body: ShiftCompleteRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission(PermissionType.WRITE_PRODUCTION))
 ):
@@ -301,7 +302,7 @@ async def complete_shift(
     Smena tugaganda handover (topshirish) ma'lumotlari bilan yakunlanadi.
     """
     service = ProductionService(db)
-    return service.complete_shift(shift_id, complete_data, handover_data)
+    return service.complete_shift(shift_id, body.complete_data, body.handover_data)
 
 
 # ============ PRODUCTION RECORD ENDPOINTS ============

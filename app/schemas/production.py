@@ -247,6 +247,11 @@ class ShiftHandoverResponse(BaseIDSchema, ShiftHandoverBase):
     handover_time: datetime
 
 
+# Shift Complete new
+class ShiftCompleteRequest(BaseSchema):
+    complete_data: ShiftComplete
+    handover_data: Optional[ShiftHandoverCreate] = None
+
 # ============ FINISHED PRODUCT STOCK SCHEMAS ============
 
 class FinishedProductStockResponse(BaseIDSchema):
