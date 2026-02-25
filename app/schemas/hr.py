@@ -159,7 +159,7 @@ class SalaryPaymentResponse(BaseIDSchema):
 # ============ LEAVE REQUEST SCHEMAS ============
 
 class LeaveRequestBase(BaseSchema):
-    leave_type: str = Field(..., pattern="^(annual|sick|unpaid|maternity)$")
+    leave_type: str = Field(..., pattern="^(annual|sick|unpaid|maternity|other)$")
     start_date: date
     end_date: date
     reason: Optional[str] = None
