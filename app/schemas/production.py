@@ -47,6 +47,7 @@ class MachineUpdate(BaseSchema):
     serial_number: Optional[str] = Field(None, max_length=100)
     production_line_id: Optional[UUID] = None
     status: Optional[str] = Field(None, pattern="^(active|maintenance|broken)$")
+    is_active: Optional[bool] = None
 
 
 class MachineResponse(BaseIDSchema, MachineBase):
