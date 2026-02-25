@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, status, Query
+from fastapi import APIRouter, Depends, status, Query, Body
 from sqlalchemy.orm import Session
 from uuid import UUID
 from app.database import get_db
@@ -290,14 +290,14 @@ async def get_shift(
 @router.put("/shifts/{shift_id}/complete", response_model=ShiftResponse)
 async def complete_shift(
     shift_id: UUID,
-    complete_data: ShiftComplete,
-    handover_data: Optional[ShiftHandoverCreate] = None,
+    complete_data: ShiftComplete = Body(...),
+    handover_data: Optional[ShiftHandoverCreate] = Body(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission(PermissionType.WRITE_PRODUCTION))
 ):
     """
     Smenani yakunlash
-    
+
     Smena tugaganda handover (topshirish) ma'lumotlari bilan yakunlanadi.
     """
     service = ProductionService(db)
