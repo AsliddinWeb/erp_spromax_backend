@@ -60,7 +60,7 @@ class UserService:
 
     def update_user(self, user_id: UUID, user_data: UserUpdate) -> User:
         """Foydalanuvchini yangilash"""
-        user = self.user_repo.get_by_id(user_id)
+        user = self.db.query(User).filter(User.id == user_id).first()
         if not user:
             raise NotFoundException(detail="Foydalanuvchi topilmadi")
 
