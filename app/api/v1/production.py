@@ -2,6 +2,8 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, status, Query, Body
 from sqlalchemy.orm import Session
 from uuid import UUID
+
+from app.core.exceptions import NotFoundException
 from app.database import get_db
 from app.schemas.production import (
     # Production Line
@@ -46,6 +48,9 @@ from app.services.production_service import ProductionService
 from app.dependencies import get_current_user, require_permission
 from app.models.user import User
 from app.core.constants import PermissionType
+
+# Machine model
+from app.models.production import Machine
 
 router = APIRouter(prefix="/production", tags=["Production"])
 
@@ -147,16 +152,29 @@ async def get_machine(
     return service.get_machine(machine_id)
 
 
-@router.put("/machines/{machine_id}", response_model=MachineResponse)
-async def update_machine(
-    machine_id: UUID,
-    machine_data: MachineUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.WRITE_PRODUCTION))
-):
+# @router.put("/machines/{machine_id}", response_model=MachineResponse)
+# async def update_machine(
+#     machine_id: UUID,
+#     machine_data: MachineUpdate,
+#     db: Session = Depends(get_db),
+#     current_user: User = Depends(require_permission(PermissionType.WRITE_PRODUCTION))
+# ):
+#     """Mashina yangilash"""
+#     service = ProductionService(db)
+#     return service.update_machine(machine_id, machine_data)
+
+def update_machine(self, machine_id: UUID, machine_data: MachineUpdate) -> Machine:
     """Mashina yangilash"""
-    service = ProductionService(db)
-    return service.update_machine(machine_id, machine_data)
+    # is_active filter siz topamiz
+    machine = self.db.query(Machine).filter(Machine.id == machine_id).first()
+    if not machine:
+        raise NotFoundException(detail="Mashina topilmadi")
+
+    if machine_data.production_line_id:
+        line = self.get_production_line(machine_data.production_line_id)
+
+    update_data = machine_data.model_dump(exclude_unset=True)
+    return self.machine_repo.update(machine, update_data)
 
 
 @router.delete("/machines/{machine_id}", status_code=status.HTTP_200_OK)
