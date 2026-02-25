@@ -70,6 +70,7 @@ class UserUpdate(BaseSchema):
     phone: Optional[str] = Field(None, max_length=20)
     role_id: Optional[UUID] = None
     is_active: Optional[bool] = None
+    password: Optional[str] = Field(None, min_length=8)  # ← qo'shing
 
 
 class UserResponse(BaseIDSchema, UserBase):

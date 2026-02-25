@@ -57,27 +57,31 @@ class UserService:
     def get_all_users(self, skip: int = 0, limit: int = 100) -> List[User]:
         """Barcha foydalanuvchilarni olish"""
         return self.user_repo.get_all_with_roles(skip=skip, limit=limit)
-    
+
     def update_user(self, user_id: UUID, user_data: UserUpdate) -> User:
         """Foydalanuvchini yangilash"""
         user = self.user_repo.get_by_id(user_id)
         if not user:
             raise NotFoundException(detail="Foydalanuvchi topilmadi")
-        
-        # Email o'zgargan bo'lsa, mavjudligini tekshirish
+
         if user_data.email and user_data.email != user.email:
             existing_email = self.user_repo.get_by_email(user_data.email)
             if existing_email:
                 raise ConflictException(detail="Bunday email mavjud")
-        
-        # Role o'zgargan bo'lsa, mavjudligini tekshirish
+
         if user_data.role_id:
             role = self.role_repo.get_by_id(user_data.role_id)
             if not role:
                 raise NotFoundException(detail="Role topilmadi")
-        
-        # Update
+
         update_data = user_data.model_dump(exclude_unset=True)
+
+        # Password hash qilish
+        if 'password' in update_data and update_data['password']:
+            update_data['hashed_password'] = get_password_hash(update_data.pop('password'))
+        else:
+            update_data.pop('password', None)
+
         return self.user_repo.update(user, update_data)
     
     def delete_user(self, user_id: UUID) -> bool:
