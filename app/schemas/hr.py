@@ -121,6 +121,23 @@ class SalaryPaymentCreate(SalaryPaymentBase):
         return v
 
 
+class CreatorInfo(BaseSchema):
+    id: UUID
+    username: str
+    full_name: Optional[str] = None
+    role: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+    @field_validator('role', mode='before')
+    @classmethod
+    def serialize_role(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str):
+            return v
+        return getattr(v, 'name', None)
+
 class SalaryPaymentResponse(BaseIDSchema):
     employee_id: UUID
     payment_date: date
@@ -134,7 +151,9 @@ class SalaryPaymentResponse(BaseIDSchema):
     notes: Optional[str] = None
     paid_by: UUID
     employee: Optional[EmployeeResponse] = None
-    payer: Optional[dict] = None
+    payer: Optional[CreatorInfo] = None  # ← dict emas
+
+    model_config = {"from_attributes": True}
 
 
 # ============ LEAVE REQUEST SCHEMAS ============
