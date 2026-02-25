@@ -6,6 +6,34 @@ from uuid import UUID
 from app.schemas.base import BaseSchema, BaseIDSchema
 
 
+# ============ SHARED INFO SCHEMAS ============
+
+class MachineInfo(BaseSchema):
+    id: UUID
+    name: str
+    serial_number: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class CreatorInfo(BaseSchema):
+    id: UUID
+    username: str
+    full_name: Optional[str] = None
+    role: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+    @field_validator('role', mode='before')
+    @classmethod
+    def serialize_role(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str):
+            return v
+        return getattr(v, 'name', None)
+
+
 # ============ MAINTENANCE REQUEST SCHEMAS ============
 
 class MaintenanceRequestBase(BaseSchema):
@@ -39,9 +67,11 @@ class MaintenanceRequestResponse(BaseIDSchema):
     completed_date: Optional[datetime] = None
     requested_by: UUID
     assigned_to: Optional[UUID] = None
-    machine: Optional[dict] = None
-    requester: Optional[dict] = None
-    technician: Optional[dict] = None
+    machine: Optional[MachineInfo] = None
+    requester: Optional[CreatorInfo] = None
+    technician: Optional[CreatorInfo] = None
+
+    model_config = {"from_attributes": True}
 
 
 # ============ MAINTENANCE LOG SCHEMAS ============
@@ -60,7 +90,9 @@ class MaintenanceLogResponse(BaseIDSchema, MaintenanceLogBase):
     request_id: UUID
     log_date: datetime
     performed_by: UUID
-    performer: Optional[dict] = None
+    performer: Optional[CreatorInfo] = None
+
+    model_config = {"from_attributes": True}
 
 
 # ============ SPARE PART SCHEMAS ============
@@ -87,10 +119,13 @@ class SparePartUpdate(BaseSchema):
     unit_price: Optional[Decimal] = Field(None, ge=0)
     quantity_in_stock: Optional[Decimal] = Field(None, ge=0)
     min_stock_level: Optional[Decimal] = Field(None, ge=0)
+    is_active: Optional[bool] = None
 
 
 class SparePartResponse(BaseIDSchema, SparePartBase):
     is_low_stock: Optional[bool] = False
+
+    model_config = {"from_attributes": True}
 
 
 # ============ SPARE PART USAGE SCHEMAS ============
@@ -103,7 +138,7 @@ class SparePartUsageBase(BaseSchema):
 
 class SparePartUsageCreate(SparePartUsageBase):
     request_id: UUID
-    
+
     @field_validator('quantity_used')
     @classmethod
     def validate_quantity(cls, v):
@@ -116,6 +151,8 @@ class SparePartUsageResponse(BaseIDSchema, SparePartUsageBase):
     request_id: UUID
     usage_date: datetime
     spare_part: Optional[SparePartResponse] = None
+
+    model_config = {"from_attributes": True}
 
 
 # ============ MAINTENANCE SCHEDULE SCHEMAS ============
@@ -143,7 +180,9 @@ class MaintenanceScheduleUpdate(BaseSchema):
 class MaintenanceScheduleResponse(BaseIDSchema, MaintenanceScheduleBase):
     next_maintenance_date: Optional[date] = None
     is_active: str
-    machine: Optional[dict] = None
+    machine: Optional[MachineInfo] = None
+
+    model_config = {"from_attributes": True}
 
 
 # ============ STATISTICS SCHEMAS ============
