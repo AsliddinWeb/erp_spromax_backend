@@ -163,6 +163,7 @@ async def get_machine(
 #     service = ProductionService(db)
 #     return service.update_machine(machine_id, machine_data)
 
+@router.put("/machines/{machine_id}", response_model=MachineResponse)
 def update_machine(self, machine_id: UUID, machine_data: MachineUpdate) -> Machine:
     """Mashina yangilash"""
     # is_active filter siz topamiz
