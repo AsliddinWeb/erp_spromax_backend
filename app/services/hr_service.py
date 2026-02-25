@@ -56,10 +56,16 @@ class HRService:
         if not department:
             raise NotFoundException(detail="Bo'lim topilmadi")
         return department
-    
+
     def get_all_departments(self, skip: int = 0, limit: int = 100) -> List[Department]:
         """Barcha bo'limlar"""
-        return self.department_repo.get_all(skip=skip, limit=limit)
+        departments = self.department_repo.get_all(skip=skip, limit=limit)
+        for dept in departments:
+            dept.employee_count = self.db.query(Employee).filter(
+                Employee.department_id == dept.id,
+                Employee.is_active == True
+            ).count()
+        return departments
     
     def update_department(self, department_id: UUID, department_data: DepartmentUpdate) -> Department:
         """Bo'lim yangilash"""
