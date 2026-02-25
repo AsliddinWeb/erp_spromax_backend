@@ -113,6 +113,24 @@ class LowStockItem(BaseSchema):
 
 # ============ MATERIAL REQUEST SCHEMAS ============
 
+class RequesterInfo(BaseSchema):
+    id: UUID
+    username: str
+    full_name: Optional[str] = None
+    role: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+    @field_validator('role', mode='before')
+    @classmethod
+    def serialize_role(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str):
+            return v
+        return getattr(v, 'name', None)
+
+
 class MaterialRequestBase(BaseSchema):
     raw_material_id: UUID
     requested_quantity: Decimal = Field(..., gt=0)
@@ -149,9 +167,10 @@ class MaterialRequestResponse(BaseIDSchema):
     notes: Optional[str] = None
     rejection_reason: Optional[str] = None
     raw_material: Optional[RawMaterialResponse] = None
-    requester: Optional[dict] = None
-    approver: Optional[dict] = None
+    requester: Optional[RequesterInfo] = None
+    approver: Optional[RequesterInfo] = None
 
+    model_config = {"from_attributes": True}
 
 # ============ STATISTICS SCHEMAS ============
 
