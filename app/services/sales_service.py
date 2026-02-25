@@ -112,18 +112,26 @@ class SalesService:
         )
     
     # ============ ORDER METHODS ============
-    
+
     def create_order(self, order_data: OrderCreate, user_id: UUID) -> Order:
         """Yangi buyurtma yaratish"""
         # Mijoz tekshirish
         customer = self.get_customer(order_data.customer_id)
-        
+
+        # ✅ Avval stock tekshirish (order yaratishdan oldin)
+        for item_data in order_data.items:
+            stock = self.finished_stock_repo.get_by_product(item_data.finished_product_id)
+            if not stock or stock.quantity_available < item_data.quantity:
+                raise InsufficientStockException(
+                    detail=f"Mahsulot omborda yetarli emas. Mavjud: {stock.quantity_available if stock else 0}"
+                )
+
         # Total amount hisoblash
         total_amount = Decimal("0")
         for item in order_data.items:
             item_total = item.quantity * item.unit_price
             total_amount += item_total
-        
+
         # Order yaratish
         new_order = Order(
             customer_id=order_data.customer_id,
@@ -138,17 +146,9 @@ class SalesService:
             created_by=user_id
         )
         order = self.order_repo.create(new_order)
-        
+
         # Order items yaratish va stock rezerv qilish
         for item_data in order_data.items:
-            # Stock tekshirish
-            stock = self.finished_stock_repo.get_by_product(item_data.finished_product_id)
-            if not stock or stock.quantity_available < item_data.quantity:
-                raise InsufficientStockException(
-                    detail=f"Mahsulot omborda yetarli emas. Mavjud: {stock.quantity_available if stock else 0}"
-                )
-            
-            # Order item yaratish
             item_total = item_data.quantity * item_data.unit_price
             order_item = OrderItem(
                 order_id=order.id,
@@ -158,13 +158,10 @@ class SalesService:
                 total_price=item_total
             )
             self.order_item_repo.create(order_item)
-            
-            # Stock rezerv qilish
             self._reserve_stock(item_data.finished_product_id, item_data.quantity)
-        
+
         self.db.commit()
         self.db.refresh(order)
-        
         return order
     
     def get_order(self, order_id: UUID) -> Order:
