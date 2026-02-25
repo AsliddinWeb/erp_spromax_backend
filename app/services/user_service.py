@@ -83,10 +83,15 @@ class UserService:
             update_data.pop('password', None)
 
         return self.user_repo.update(user, update_data)
-    
+
     def delete_user(self, user_id: UUID) -> bool:
-        """Foydalanuvchini o'chirish"""
-        return self.user_repo.delete(user_id)
+        """Foydalanuvchini o'chirish (hard delete)"""
+        user = self.user_repo.get_by_id(user_id)
+        if not user:
+            raise NotFoundException(detail="Foydalanuvchi topilmadi")
+        self.db.delete(user)
+        self.db.commit()
+        return True
     
     def get_user_count(self) -> int:
         """Foydalanuvchilar sonini olish"""
