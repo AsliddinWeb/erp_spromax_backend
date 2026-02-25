@@ -136,13 +136,27 @@ class ProductionService:
             return self.db.query(Machine).offset(skip).limit(limit).all()
         return self.machine_repo.get_all(skip=skip, limit=limit)
     
+    # def update_machine(self, machine_id: UUID, machine_data: MachineUpdate) -> Machine:
+    #     """Mashina yangilash"""
+    #     machine = self.get_machine(machine_id)
+    #
+    #     if machine_data.production_line_id:
+    #         line = self.get_production_line(machine_data.production_line_id)
+    #
+    #     update_data = machine_data.model_dump(exclude_unset=True)
+    #     return self.machine_repo.update(machine, update_data)
+
+    # 2-update machine
     def update_machine(self, machine_id: UUID, machine_data: MachineUpdate) -> Machine:
         """Mashina yangilash"""
-        machine = self.get_machine(machine_id)
-        
+        # is_active filter siz topamiz
+        machine = self.db.query(Machine).filter(Machine.id == machine_id).first()
+        if not machine:
+            raise NotFoundException(detail="Mashina topilmadi")
+
         if machine_data.production_line_id:
             line = self.get_production_line(machine_data.production_line_id)
-        
+
         update_data = machine_data.model_dump(exclude_unset=True)
         return self.machine_repo.update(machine, update_data)
     

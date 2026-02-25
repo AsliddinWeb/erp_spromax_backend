@@ -164,18 +164,15 @@ async def get_machine(
 #     return service.update_machine(machine_id, machine_data)
 
 @router.put("/machines/{machine_id}", response_model=MachineResponse)
-def update_machine(self, machine_id: UUID, machine_data: MachineUpdate) -> Machine:
+async def update_machine(
+    machine_id: UUID,
+    machine_data: MachineUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission(PermissionType.WRITE_PRODUCTION))
+):
     """Mashina yangilash"""
-    # is_active filter siz topamiz
-    machine = self.db.query(Machine).filter(Machine.id == machine_id).first()
-    if not machine:
-        raise NotFoundException(detail="Mashina topilmadi")
-
-    if machine_data.production_line_id:
-        line = self.get_production_line(machine_data.production_line_id)
-
-    update_data = machine_data.model_dump(exclude_unset=True)
-    return self.machine_repo.update(machine, update_data)
+    service = ProductionService(db)
+    return service.update_machine(machine_id, machine_data)
 
 
 @router.delete("/machines/{machine_id}", status_code=status.HTTP_200_OK)
