@@ -183,7 +183,9 @@ class LeaveRequestResponse(BaseIDSchema):
     status: str
     approved_by: Optional[UUID] = None
     employee: Optional[EmployeeResponse] = None
-    approver: Optional[dict] = None
+    approver: Optional[CreatorInfo] = None  # ← dict emas
+
+    model_config = {"from_attributes": True}
 
 
 # ============ STATISTICS SCHEMAS ============
