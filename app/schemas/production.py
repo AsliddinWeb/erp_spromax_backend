@@ -22,6 +22,7 @@ class ProductionLineUpdate(BaseSchema):
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     description: Optional[str] = None
     capacity_per_hour: Optional[Decimal] = Field(None, ge=0)
+    is_active: Optional[bool] = None
 
 
 class ProductionLineResponse(BaseIDSchema, ProductionLineBase):
