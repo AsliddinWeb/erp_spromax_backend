@@ -137,6 +137,12 @@ class HRService:
         return self.employee_repo.delete(employee_id)
     
     # ============ ATTENDANCE METHODS ============
+
+    def get_all_attendances(self, skip: int = 0, limit: int = 100) -> List[Attendance]:
+        """Barcha davomatlar"""
+        return self.db.query(Attendance).order_by(
+            Attendance.attendance_date.desc()
+        ).offset(skip).limit(limit).all()
     
     def create_attendance(self, attendance_data: AttendanceCreate) -> Attendance:
         """Davomat yozish"""
