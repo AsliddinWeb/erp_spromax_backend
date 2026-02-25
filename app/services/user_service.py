@@ -85,13 +85,8 @@ class UserService:
         return self.user_repo.update(user, update_data)
 
     def delete_user(self, user_id: UUID) -> bool:
-        """Foydalanuvchini o'chirish (hard delete)"""
-        user = self.user_repo.get_by_id(user_id)
-        if not user:
-            raise NotFoundException(detail="Foydalanuvchi topilmadi")
-        self.db.delete(user)
-        self.db.commit()
-        return True
+        """Foydalanuvchini o'chirish"""
+        return self.user_repo.delete(user_id)
     
     def get_user_count(self) -> int:
         """Foydalanuvchilar sonini olish"""

@@ -33,14 +33,11 @@ class UserRepository(BaseRepository[User]):
             User.id == user_id,
             User.is_active == True
         ).first()
-    
+
     def get_all_with_roles(self, skip: int = 0, limit: int = 100) -> List[User]:
-        """Barcha foydalanuvchilarni role bilan olish"""
         return self.db.query(User).options(
             joinedload(User.role)
-        ).filter(
-            User.is_active == True
-        ).offset(skip).limit(limit).all()
+        ).offset(skip).limit(limit).all()  # is_active filteri olib tashlandi
 
 
 class RoleRepository(BaseRepository[Role]):
