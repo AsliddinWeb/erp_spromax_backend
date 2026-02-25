@@ -89,9 +89,12 @@ class ProductionService:
         if not line:
             raise NotFoundException(detail="Liniya topilmadi")
         return line
-    
-    def get_all_production_lines(self, skip: int = 0, limit: int = 100) -> List[ProductionLine]:
+
+    def get_all_production_lines(self, skip: int = 0, limit: int = 100, include_inactive: bool = False) -> List[
+        ProductionLine]:
         """Barcha liniyalar"""
+        if include_inactive:
+            return self.db.query(ProductionLine).offset(skip).limit(limit).all()
         return self.line_repo.get_all(skip=skip, limit=limit)
     
     def update_production_line(self, line_id: UUID, line_data: ProductionLineUpdate) -> ProductionLine:

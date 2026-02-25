@@ -67,12 +67,12 @@ async def create_production_line(
 async def get_production_lines(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
+    include_inactive: bool = Query(False),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission(PermissionType.READ_PRODUCTION))
 ):
-    """Barcha ishlab chiqarish liniyalari"""
     service = ProductionService(db)
-    return service.get_all_production_lines(skip=skip, limit=limit)
+    return service.get_all_production_lines(skip=skip, limit=limit, include_inactive=include_inactive)
 
 
 @router.get("/lines/{line_id}", response_model=ProductionLineResponse)
