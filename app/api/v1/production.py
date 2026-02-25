@@ -127,12 +127,13 @@ async def create_machine(
 async def get_machines(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
+    include_inactive: bool = Query(False),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission(PermissionType.READ_PRODUCTION))
 ):
     """Barcha mashinalar"""
     service = ProductionService(db)
-    return service.get_all_machines(skip=skip, limit=limit)
+    return service.get_all_machines(skip=skip, limit=limit, include_inactive=include_inactive)
 
 
 @router.get("/machines/{machine_id}", response_model=MachineResponse)

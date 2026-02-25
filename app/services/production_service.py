@@ -129,9 +129,11 @@ class ProductionService:
         if not machine:
             raise NotFoundException(detail="Mashina topilmadi")
         return machine
-    
-    def get_all_machines(self, skip: int = 0, limit: int = 100) -> List[Machine]:
+
+    def get_all_machines(self, skip: int = 0, limit: int = 100, include_inactive: bool = False):
         """Barcha mashinalar"""
+        if include_inactive:
+            return self.db.query(Machine).offset(skip).limit(limit).all()
         return self.machine_repo.get_all(skip=skip, limit=limit)
     
     def update_machine(self, machine_id: UUID, machine_data: MachineUpdate) -> Machine:
