@@ -159,8 +159,8 @@ class SparePartUsageResponse(BaseIDSchema, SparePartUsageBase):
 
 class MaintenanceScheduleBase(BaseSchema):
     machine_id: UUID
-    schedule_type: str = Field(..., pattern="^(daily|weekly|monthly|yearly)$")
-    description: str = Field(..., min_length=1)
+    schedule_type: str = Field(..., pattern="^(daily|weekly|monthly|yearly|preventive|inspection|lubrication|calibration|cleaning)$")
+    description: str = Field(default="", min_length=0)
     interval_days: int = Field(..., gt=0)
     last_maintenance_date: Optional[date] = None
 
