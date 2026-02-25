@@ -101,8 +101,25 @@ class ShiftResponse(BaseIDSchema):
     status: str
     notes: Optional[str] = None
     production_line: Optional[ProductionLineResponse] = None
-    operator: Optional[dict] = None
+    operator: Optional[object] = None
     machines: Optional[List[MachineResponse]] = None
+
+    model_config = {"from_attributes": True, "arbitrary_types_allowed": True}
+
+    @field_validator('operator', mode='before')
+    @classmethod
+    def serialize_operator(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, dict):
+            return v
+        # User object kelsa dict ga aylantiramiz
+        return {
+            'id': str(v.id),
+            'username': getattr(v, 'username', None),
+            'full_name': getattr(v, 'full_name', None),
+            'role': getattr(v, 'role', None),
+        }
 
 
 # ============ PRODUCTION RECORD SCHEMAS ============
