@@ -160,6 +160,7 @@ class SalaryPaymentResponse(BaseIDSchema):
 
 class LeaveRequestBase(BaseSchema):
     leave_type: str = Field(..., pattern="^(annual|sick|unpaid|maternity|other)$")
+    is_paid: bool = False
     start_date: date
     end_date: date
     reason: Optional[str] = None
@@ -176,6 +177,7 @@ class LeaveRequestUpdate(BaseSchema):
 class LeaveRequestResponse(BaseIDSchema):
     employee_id: UUID
     leave_type: str
+    is_paid: bool = False
     start_date: date
     end_date: date
     days_count: int
@@ -183,9 +185,44 @@ class LeaveRequestResponse(BaseIDSchema):
     status: str
     approved_by: Optional[UUID] = None
     employee: Optional[EmployeeResponse] = None
-    approver: Optional[CreatorInfo] = None  # ← dict emas
+    approver: Optional[CreatorInfo] = None
 
     model_config = {"from_attributes": True}
+
+
+# ============ BATCH SALARY SCHEMAS ============
+
+class SalaryPreviewItem(BaseSchema):
+    employee_id: UUID
+    full_name: str
+    department: str
+    base_salary: Decimal
+    unpaid_leave_days: int
+    daily_salary: Decimal
+    deduction: Decimal
+    bonus: Decimal
+    total_amount: Decimal
+
+
+class BatchSalaryPaymentItem(BaseSchema):
+    employee_id: UUID
+    base_salary: Decimal
+    bonus: Decimal = Decimal("0")
+    deduction: Decimal = Decimal("0")
+    total_amount: Decimal
+    notes: Optional[str] = None
+
+
+class BatchSalaryPaymentCreate(BaseSchema):
+    month: str = Field(..., pattern=r"^\d{4}-\d{2}$")  # "2026-02"
+    payments: List[BatchSalaryPaymentItem]
+
+
+class BatchSalaryPaymentResponse(BaseSchema):
+    success_count: int
+    failed_count: int
+    total_amount: Decimal
+    errors: List[str] = []
 
 
 # ============ STATISTICS SCHEMAS ============

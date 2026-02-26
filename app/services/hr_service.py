@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from uuid import UUID
+from calendar import monthrange
 from app.models.hr import Department, Employee, Attendance, SalaryPayment, LeaveRequest
 from app.schemas.hr import (
     DepartmentCreate,
@@ -14,7 +15,10 @@ from app.schemas.hr import (
     SalaryPaymentCreate,
     LeaveRequestCreate,
     LeaveRequestUpdate,
-    HRStatistics
+    HRStatistics,
+    SalaryPreviewItem,
+    BatchSalaryPaymentCreate,
+    BatchSalaryPaymentResponse,
 )
 from app.repositories.hr_repository import (
     DepartmentRepository,
@@ -238,6 +242,140 @@ class HRService:
             pass  # Moliya xatosi asosiy to'lovni bloklamasin
 
         return salary_payment
+
+    # ============ BATCH SALARY METHODS ============
+
+    def calculate_salary_preview(self, month: str) -> List[SalaryPreviewItem]:
+        """Oy uchun barcha xodimlar oylik hisob-kitobi preview"""
+        # "2026-02" → year=2026, month=2
+        year, mon = int(month.split("-")[0]), int(month.split("-")[1])
+        period_start = date(year, mon, 1)
+        period_end = date(year, mon, monthrange(year, mon)[1])
+
+        # Faqat active xodimlar
+        employees = self.db.query(Employee).filter(
+            Employee.employment_status == 'active',
+            Employee.is_active == True
+        ).all()
+
+        result = []
+        for emp in employees:
+            daily_salary = (emp.salary / Decimal("26")).quantize(Decimal("1"))
+
+            # Shu oyda approved + is_paid=False ta'tillar
+            unpaid_leaves = self.db.query(LeaveRequest).filter(
+                LeaveRequest.employee_id == emp.id,
+                LeaveRequest.status == 'approved',
+                LeaveRequest.is_paid == False,
+                LeaveRequest.start_date >= period_start,
+                LeaveRequest.start_date <= period_end,
+                LeaveRequest.is_active == True
+            ).all()
+
+            unpaid_days = sum(lr.days_count for lr in unpaid_leaves)
+            deduction = (daily_salary * unpaid_days).quantize(Decimal("1"))
+            total = (emp.salary - deduction).quantize(Decimal("1"))
+
+            dept_name = emp.department.name if emp.department else "—"
+
+            result.append(SalaryPreviewItem(
+                employee_id=emp.id,
+                full_name=f"{emp.first_name} {emp.last_name}",
+                department=dept_name,
+                base_salary=emp.salary,
+                unpaid_leave_days=unpaid_days,
+                daily_salary=daily_salary,
+                deduction=deduction,
+                bonus=Decimal("0"),
+                total_amount=total
+            ))
+
+        return result
+
+    def batch_salary_payment(
+            self,
+            batch_data: BatchSalaryPaymentCreate,
+            user_id: UUID
+    ) -> BatchSalaryPaymentResponse:
+        """Batch oylik to'lovi"""
+        year, mon = int(batch_data.month.split("-")[0]), int(batch_data.month.split("-")[1])
+        period_start = date(year, mon, 1)
+        period_end = date(year, mon, monthrange(year, mon)[1])
+        today = date.today()
+
+        success_count = 0
+        failed_count = 0
+        total_amount = Decimal("0")
+        errors = []
+
+        for item in batch_data.payments:
+            try:
+                # Allaqachon to'langan bo'lsa tekshirish
+                existing = self.db.query(SalaryPayment).filter(
+                    SalaryPayment.employee_id == item.employee_id,
+                    SalaryPayment.period_start == period_start,
+                    SalaryPayment.period_end == period_end,
+                    SalaryPayment.is_active == True
+                ).first()
+
+                if existing:
+                    employee = self.db.query(Employee).filter(
+                        Employee.id == item.employee_id
+                    ).first()
+                    name = f"{employee.first_name} {employee.last_name}" if employee else str(item.employee_id)
+                    errors.append(f"{name}: Bu oy uchun ish haqi allaqachon to'langan")
+                    failed_count += 1
+                    continue
+
+                # Xodim tekshirish
+                employee = self.get_employee(item.employee_id)
+                computed_total = item.base_salary + item.bonus - item.deduction
+
+                new_payment = SalaryPayment(
+                    employee_id=item.employee_id,
+                    payment_date=today,
+                    period_start=period_start,
+                    period_end=period_end,
+                    base_salary=item.base_salary,
+                    bonus=item.bonus,
+                    deductions=item.deduction,
+                    total_amount=computed_total,
+                    payment_method="bank_transfer",
+                    notes=item.notes or f"{batch_data.month} oyi ish haqi",
+                    paid_by=user_id
+                )
+                salary_payment = self.salary_repo.create(new_payment)
+
+                # Finance auto-transaction
+                try:
+                    from app.services.finance_service import FinanceService
+                    finance_service = FinanceService(self.db)
+                    full_name = f"{employee.first_name} {employee.last_name}"
+                    finance_service.create_automatic_transaction(
+                        transaction_type="expense",
+                        amount=computed_total,
+                        category_name="Ish haqi xarajatlari",
+                        description=f"Ish haqi — {full_name} ({batch_data.month})",
+                        reference_type="salary_payment",
+                        reference_id=salary_payment.id,
+                        user_id=user_id
+                    )
+                except Exception:
+                    pass
+
+                success_count += 1
+                total_amount += computed_total
+
+            except Exception as e:
+                failed_count += 1
+                errors.append(f"Xodim {item.employee_id}: {str(e)}")
+
+        return BatchSalaryPaymentResponse(
+            success_count=success_count,
+            failed_count=failed_count,
+            total_amount=total_amount,
+            errors=errors
+        )
 
     def get_salary_payment(self, payment_id: UUID) -> SalaryPayment:
         """To'lov olish"""
