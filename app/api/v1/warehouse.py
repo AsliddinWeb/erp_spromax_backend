@@ -38,13 +38,13 @@ router = APIRouter(prefix="/warehouse", tags=["Warehouse"])
 
 @router.post("/suppliers", response_model=SupplierResponse, status_code=status.HTTP_201_CREATED)
 async def create_supplier(
-    supplier_data: SupplierCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.WRITE_WAREHOUSE))
+        supplier_data: SupplierCreate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.WRITE_WAREHOUSE))
 ):
     """
     Yangi yetkazib beruvchi qo'shish
-    
+
     Faqat warehouse_manager va superadmin ruxsat berilgan.
     """
     service = WarehouseService(db)
@@ -53,10 +53,10 @@ async def create_supplier(
 
 @router.get("/suppliers", response_model=List[SupplierResponse])
 async def get_suppliers(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=100),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.READ_WAREHOUSE))
+        skip: int = Query(0, ge=0),
+        limit: int = Query(100, ge=1, le=100),
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.READ_WAREHOUSE))
 ):
     """Barcha yetkazib beruvchilar ro'yxati"""
     service = WarehouseService(db)
@@ -65,9 +65,9 @@ async def get_suppliers(
 
 @router.get("/suppliers/{supplier_id}", response_model=SupplierResponse)
 async def get_supplier(
-    supplier_id: UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.READ_WAREHOUSE))
+        supplier_id: UUID,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.READ_WAREHOUSE))
 ):
     """Bitta yetkazib beruvchi ma'lumotlari"""
     service = WarehouseService(db)
@@ -76,10 +76,10 @@ async def get_supplier(
 
 @router.put("/suppliers/{supplier_id}", response_model=SupplierResponse)
 async def update_supplier(
-    supplier_id: UUID,
-    supplier_data: SupplierUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.WRITE_WAREHOUSE))
+        supplier_id: UUID,
+        supplier_data: SupplierUpdate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.WRITE_WAREHOUSE))
 ):
     """Yetkazib beruvchi ma'lumotlarini yangilash"""
     service = WarehouseService(db)
@@ -88,9 +88,9 @@ async def update_supplier(
 
 @router.delete("/suppliers/{supplier_id}", status_code=status.HTTP_200_OK)
 async def delete_supplier(
-    supplier_id: UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.WRITE_WAREHOUSE))
+        supplier_id: UUID,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.WRITE_WAREHOUSE))
 ):
     """Yetkazib beruvchini o'chirish"""
     service = WarehouseService(db)
@@ -102,9 +102,9 @@ async def delete_supplier(
 
 @router.post("/raw-materials", response_model=RawMaterialResponse, status_code=status.HTTP_201_CREATED)
 async def create_raw_material(
-    material_data: RawMaterialCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.WRITE_WAREHOUSE))
+        material_data: RawMaterialCreate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.WRITE_WAREHOUSE))
 ):
     """Yangi xom-ashyo qo'shish"""
     service = WarehouseService(db)
@@ -113,28 +113,28 @@ async def create_raw_material(
 
 @router.get("/raw-materials", response_model=List[RawMaterialResponse])
 async def get_raw_materials(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=100),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.READ_WAREHOUSE))
+        skip: int = Query(0, ge=0),
+        limit: int = Query(100, ge=1, le=100),
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.READ_WAREHOUSE))
 ):
     """Xom-ashyo katalogi"""
     service = WarehouseService(db)
     materials = service.get_all_raw_materials(skip=skip, limit=limit)
-    
+
     # Current stock qo'shish
     for material in materials:
         if material.warehouse_stock:
             material.current_stock = material.warehouse_stock.quantity
-    
+
     return materials
 
 
 @router.get("/raw-materials/{material_id}", response_model=RawMaterialResponse)
 async def get_raw_material(
-    material_id: UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.READ_WAREHOUSE))
+        material_id: UUID,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.READ_WAREHOUSE))
 ):
     """Bitta xom-ashyo ma'lumotlari"""
     service = WarehouseService(db)
@@ -143,10 +143,10 @@ async def get_raw_material(
 
 @router.put("/raw-materials/{material_id}", response_model=RawMaterialResponse)
 async def update_raw_material(
-    material_id: UUID,
-    material_data: RawMaterialUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.WRITE_WAREHOUSE))
+        material_id: UUID,
+        material_data: RawMaterialUpdate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.WRITE_WAREHOUSE))
 ):
     """Xom-ashyo ma'lumotlarini yangilash"""
     service = WarehouseService(db)
@@ -155,9 +155,9 @@ async def update_raw_material(
 
 @router.delete("/raw-materials/{material_id}", status_code=status.HTTP_200_OK)
 async def delete_raw_material(
-    material_id: UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.WRITE_WAREHOUSE))
+        material_id: UUID,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.WRITE_WAREHOUSE))
 ):
     """Xom-ashyoni o'chirish"""
     service = WarehouseService(db)
@@ -169,25 +169,25 @@ async def delete_raw_material(
 
 @router.post("/receipts", response_model=WarehouseReceiptResponse, status_code=status.HTTP_201_CREATED)
 async def create_receipt(
-    receipt_data: WarehouseReceiptCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.WRITE_WAREHOUSE))
+        receipt_data: WarehouseReceiptCreate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.WRITE_WAREHOUSE))
 ):
     """
     Xom-ashyo qabul qilish
-    
+
     Yetkazib beruvchidan xom-ashyo qabul qilib, omborga kiritish.
     """
     service = WarehouseService(db)
-    return service.create_receipt(receipt_data)
+    return service.create_receipt(receipt_data, current_user.id)
 
 
 @router.get("/receipts", response_model=List[WarehouseReceiptResponse])
 async def get_receipts(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=100),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.READ_WAREHOUSE))
+        skip: int = Query(0, ge=0),
+        limit: int = Query(100, ge=1, le=100),
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.READ_WAREHOUSE))
 ):
     """Qabul qilishlar tarixi"""
     service = WarehouseService(db)
@@ -196,9 +196,9 @@ async def get_receipts(
 
 @router.get("/receipts/{receipt_id}", response_model=WarehouseReceiptResponse)
 async def get_receipt(
-    receipt_id: UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.READ_WAREHOUSE))
+        receipt_id: UUID,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.READ_WAREHOUSE))
 ):
     """Bitta qabul qilish ma'lumotlari"""
     service = WarehouseService(db)
@@ -209,10 +209,10 @@ async def get_receipt(
 
 @router.get("/stock", response_model=List[WarehouseStockResponse])
 async def get_stock(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=100),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.READ_WAREHOUSE))
+        skip: int = Query(0, ge=0),
+        limit: int = Query(100, ge=1, le=100),
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.READ_WAREHOUSE))
 ):
     """Ombor qoldiqlari"""
     service = WarehouseService(db)
@@ -221,9 +221,9 @@ async def get_stock(
 
 @router.get("/stock/{material_id}", response_model=WarehouseStockResponse)
 async def get_stock_by_material(
-    material_id: UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.READ_WAREHOUSE))
+        material_id: UUID,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.READ_WAREHOUSE))
 ):
     """Bitta xom-ashyo qoldig'i"""
     service = WarehouseService(db)
@@ -232,8 +232,8 @@ async def get_stock_by_material(
 
 @router.get("/low-stock", response_model=List[LowStockItem])
 async def get_low_stock(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.READ_WAREHOUSE))
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.READ_WAREHOUSE))
 ):
     """Kam qoldiqlar ro'yxati"""
     service = WarehouseService(db)
@@ -244,13 +244,13 @@ async def get_low_stock(
 
 @router.post("/requests", response_model=MaterialRequestResponse, status_code=status.HTTP_201_CREATED)
 async def create_material_request(
-    request_data: MaterialRequestCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+        request_data: MaterialRequestCreate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
 ):
     """
     Xom-ashyo so'rovi yuborish
-    
+
     Operator ishlab chiqarish uchun xom-ashyo so'raydi.
     """
     service = WarehouseService(db)
@@ -259,11 +259,11 @@ async def create_material_request(
 
 @router.get("/requests", response_model=List[MaterialRequestResponse])
 async def get_material_requests(
-    status: Optional[str] = Query(None),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=100),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.READ_WAREHOUSE))
+        status: Optional[str] = Query(None),
+        skip: int = Query(0, ge=0),
+        limit: int = Query(100, ge=1, le=100),
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.READ_WAREHOUSE))
 ):
     """Xom-ashyo so'rovlari ro'yxati"""
     service = WarehouseService(db)
@@ -272,10 +272,10 @@ async def get_material_requests(
 
 @router.get("/requests/my", response_model=List[MaterialRequestResponse])
 async def get_my_requests(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=100),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+        skip: int = Query(0, ge=0),
+        limit: int = Query(100, ge=1, le=100),
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
 ):
     """Mening so'rovlarim"""
     service = WarehouseService(db)
@@ -284,9 +284,9 @@ async def get_my_requests(
 
 @router.get("/requests/{request_id}", response_model=MaterialRequestResponse)
 async def get_material_request(
-    request_id: UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+        request_id: UUID,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
 ):
     """Bitta so'rov ma'lumotlari"""
     service = WarehouseService(db)
@@ -295,14 +295,14 @@ async def get_material_request(
 
 @router.put("/requests/{request_id}/approve", response_model=MaterialRequestResponse)
 async def approve_request(
-    request_id: UUID,
-    approve_data: MaterialRequestApprove,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.APPROVE_MATERIAL_REQUEST))
+        request_id: UUID,
+        approve_data: MaterialRequestApprove,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.APPROVE_MATERIAL_REQUEST))
 ):
     """
     So'rovni tasdiqlash
-    
+
     Faqat warehouse_manager tasdiqlashi mumkin.
     """
     service = WarehouseService(db)
@@ -311,14 +311,14 @@ async def approve_request(
 
 @router.put("/requests/{request_id}/reject", response_model=MaterialRequestResponse)
 async def reject_request(
-    request_id: UUID,
-    reject_data: MaterialRequestReject,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.APPROVE_MATERIAL_REQUEST))
+        request_id: UUID,
+        reject_data: MaterialRequestReject,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.APPROVE_MATERIAL_REQUEST))
 ):
     """
     So'rovni rad etish
-    
+
     Faqat warehouse_manager rad etishi mumkin.
     """
     service = WarehouseService(db)
@@ -329,8 +329,8 @@ async def reject_request(
 
 @router.get("/statistics", response_model=WarehouseStatistics)
 async def get_statistics(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.READ_WAREHOUSE))
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.READ_WAREHOUSE))
 ):
     """Ombor statistikasi"""
     service = WarehouseService(db)

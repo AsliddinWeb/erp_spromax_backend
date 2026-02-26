@@ -114,7 +114,9 @@ class FinanceService:
             limit: int = 100,
             transaction_type: Optional[str] = None,
             start_date: Optional[datetime] = None,
-            end_date: Optional[datetime] = None
+            end_date: Optional[datetime] = None,
+            reference_type: Optional[str] = None,
+            is_auto: Optional[bool] = None
     ) -> List[FinancialTransaction]:
         """Barcha tranzaksiyalar"""
         return self.transaction_repo.get_all_with_relations(
@@ -122,7 +124,9 @@ class FinanceService:
             limit=limit,
             transaction_type=transaction_type,
             start_date=start_date,
-            end_date=end_date
+            end_date=end_date,
+            reference_type=reference_type,
+            is_auto=is_auto
         )
 
     def update_transaction(
@@ -162,7 +166,13 @@ class FinanceService:
         """Avtomatik tranzaksiya yaratish (boshqa modullardan)"""
         category = self.category_repo.get_by_name(category_name)
         if not category:
-            return None
+            # Kategoriya topilmasa, yaratib olamiz
+            new_cat = TransactionCategory(
+                name=category_name,
+                description=f"{category_name} — avtomatik yaratilgan",
+                category_type=transaction_type
+            )
+            category = self.category_repo.create(new_cat)
 
         new_transaction = FinancialTransaction(
             transaction_date=datetime.utcnow(),
@@ -172,6 +182,7 @@ class FinanceService:
             description=description,
             reference_type=reference_type,
             reference_id=reference_id,
+            is_auto=True,
             created_by=user_id
         )
 

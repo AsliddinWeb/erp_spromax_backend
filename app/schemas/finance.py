@@ -38,6 +38,7 @@ class FinancialTransactionBase(BaseSchema):
     description: Optional[str] = None
     reference_type: Optional[str] = Field(None, max_length=50)
     reference_id: Optional[UUID] = None
+    is_auto: Optional[bool] = False
 
 
 class FinancialTransactionCreate(FinancialTransactionBase):
