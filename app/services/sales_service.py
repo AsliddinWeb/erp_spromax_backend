@@ -259,13 +259,30 @@ class SalesService:
                 detail=f"To'lov summasi qolgan qarzdan oshib ketmoqda. Qolgan: {remaining}"
             )
 
+        # Auto transaction_id generatsiya
+        if not payment_data.transaction_id:
+            last = self.db.query(Payment).filter(
+                Payment.transaction_id.like('SPX-%')
+            ).order_by(Payment.transaction_id.desc()).first()
+            if last and last.transaction_id:
+                try:
+                    last_num = int(last.transaction_id.split('-')[1])
+                    next_num = last_num + 1
+                except (IndexError, ValueError):
+                    next_num = 1
+            else:
+                next_num = 1
+            auto_txn_id = f"SPX-{next_num:010d}"
+        else:
+            auto_txn_id = payment_data.transaction_id
+
         # Payment yaratish
         new_payment = Payment(
             order_id=payment_data.order_id,
             amount=payment_data.amount,
             payment_date=payment_data.payment_date,
             payment_method=payment_data.payment_method,
-            transaction_id=payment_data.transaction_id,
+            transaction_id=auto_txn_id,
             notes=payment_data.notes,
             received_by=user_id
         )
