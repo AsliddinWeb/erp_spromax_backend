@@ -71,12 +71,12 @@ class MaintenanceService:
             requested_by=user_id
         )
 
-        # Agar urgent bo'lsa, mashina statusini o'zgartirish
-        if request_data.priority == 'urgent':
+        # Agar critical bo'lsa, mashina statusini o'zgartirish
+        if request_data.priority == 'critical':
             machine.status = 'maintenance'
             self.db.commit()
 
-        new_request = self.request_repo.create(new_request)
+        created_request = self.request_repo.create(new_request)
 
         # Bildirishnoma yuborish
         try:
@@ -85,12 +85,12 @@ class MaintenanceService:
             notif_service.notify_maintenance_request(
                 machine_name=machine.name,
                 priority=request_data.priority,
-                request_id=new_request.id
+                request_id=created_request.id
             )
         except Exception:
             pass
 
-        return new_request
+        return created_request
 
     def get_request(self, request_id: UUID) -> MaintenanceRequest:
         """So'rov olish"""
