@@ -4,6 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 from app.schemas.base import BaseSchema, BaseIDSchema
+from app.schemas.warehouse import RawMaterialResponse
 
 
 # ============ PRODUCTION LINE SCHEMAS ============
@@ -154,7 +155,7 @@ class ProductionRecordResponse(BaseIDSchema):
     quantity_used: Decimal
     recorded_at: datetime
     notes: Optional[str] = None
-    raw_material: Optional[dict] = None
+    raw_material: Optional[RawMaterialResponse] = None
 
 
 # ============ PRODUCTION OUTPUT SCHEMAS ============
@@ -329,7 +330,7 @@ class ScrapStockResponse(BaseIDSchema):
     last_updated: datetime
     finished_product: Optional[FinishedProductResponse] = None
     # raw_material inline (import aylanmaslik uchun dict sifatida)
-    raw_material: Optional[dict] = None
+    raw_material: Optional[RawMaterialResponse] = None
 
 
 class ScrapStockTransactionResponse(BaseIDSchema):
@@ -342,7 +343,7 @@ class ScrapStockTransactionResponse(BaseIDSchema):
     notes: Optional[str] = None
     recorded_at: datetime
     finished_product: Optional[FinishedProductResponse] = None
-    raw_material: Optional[dict] = None
+    raw_material: Optional[RawMaterialResponse] = None
 
 
 class ScrapTransferCreate(BaseSchema):
