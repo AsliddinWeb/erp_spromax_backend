@@ -57,6 +57,8 @@ from app.models.maintenance import (
     MaintenanceSchedule
 )
 
+from app.models.notification import Notification
+
 # this is the Alembic Config object
 config = context.config
 
