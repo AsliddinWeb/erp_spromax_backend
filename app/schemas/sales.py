@@ -6,6 +6,7 @@ from uuid import UUID
 from pydantic import Field, EmailStr, field_validator, ConfigDict, BaseModel
 
 from app.schemas.base import BaseSchema, BaseIDSchema
+from app.schemas.production import FinishedProductResponse
 
 
 # ================= USER SHORT =================
@@ -80,7 +81,7 @@ class OrderItemResponse(BaseIDSchema):
     quantity: Decimal
     unit_price: Decimal
     total_price: Decimal
-    finished_product: Optional[dict] = None
+    finished_product: Optional[FinishedProductResponse] = None
 
     model_config = ConfigDict(from_attributes=True)
 
