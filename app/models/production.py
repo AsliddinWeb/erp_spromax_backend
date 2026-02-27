@@ -222,29 +222,54 @@ class ShiftPause(BaseModel):
 
 
 class ScrapStock(BaseModel):
-    """Atxot mini sklad — mahsulot va tur bo'yicha qoldiq
+    """Atxot mini sklad — 2 tur:
+      - brak     : smenadan tushgan yaroqsiz TAYYOR MAHSULOTLAR (finished_product_id)
+      - recycled : tegirmondan chiqqan QAYTA ISHLANGAN XOM ASHYO (raw_material_id)
 
-    stock_type:
-      - 'brak'     : smenadan tushgan yaroqsiz mahsulotlar
-      - 'recycled' : tegirmondan chiqqan qayta ishlangan xom ashyo
+    Brak  → finished_product_id to'ldiriladi, raw_material_id = NULL
+    Recycled → raw_material_id to'ldiriladi, finished_product_id = NULL
     """
     __tablename__ = "scrap_stock"
 
-    finished_product_id = Column(UUID(as_uuid=True), ForeignKey('finished_products.id'), nullable=False)
+    # Brak uchun (tayyor mahsulot)
+    finished_product_id = Column(UUID(as_uuid=True), ForeignKey('finished_products.id'), nullable=True)
+    # Recycled uchun (xom ashyo — asosiy ombor GA EMAS, atxot skladda)
+    raw_material_id = Column(UUID(as_uuid=True), ForeignKey('raw_materials.id'), nullable=True)
+
     stock_type = Column(String(20), nullable=False, default='brak')  # 'brak' | 'recycled'
     quantity = Column(Numeric(10, 2), nullable=False, default=0)
     last_updated = Column(DateTime, nullable=False)
 
     __table_args__ = (
-        UniqueConstraint('finished_product_id', 'stock_type', name='uq_scrap_product_type'),
+        # Brak: (finished_product_id, stock_type) unique
+        # Recycled: (raw_material_id, stock_type) unique
+        # Oddiy unique constraint emas, check qilinadi service da
     )
 
     # Relationships
     finished_product = relationship("FinishedProduct")
+    raw_material = relationship("RawMaterial")
     transactions = relationship("ScrapStockTransaction", back_populates="scrap_stock")
 
+    @property
+    def product_name(self):
+        if self.finished_product:
+            return self.finished_product.name
+        if self.raw_material:
+            return self.raw_material.name
+        return "Noma'lum"
+
+    @property
+    def product_unit(self):
+        if self.finished_product:
+            return self.finished_product.unit
+        if self.raw_material:
+            return self.raw_material.unit
+        return ""
+
     def __repr__(self):
-        return f"<ScrapStock {self.finished_product_id} [{self.stock_type}]: {self.quantity}>"
+        pid = self.finished_product_id or self.raw_material_id
+        return f"<ScrapStock {pid} [{self.stock_type}]: {self.quantity}>"
 
 
 class ScrapStockTransaction(BaseModel):
@@ -252,22 +277,27 @@ class ScrapStockTransaction(BaseModel):
     __tablename__ = "scrap_stock_transactions"
 
     scrap_stock_id = Column(UUID(as_uuid=True), ForeignKey('scrap_stock.id'), nullable=False)
-    finished_product_id = Column(UUID(as_uuid=True), ForeignKey('finished_products.id'), nullable=False)
+    # Brak tranzaksiyalar uchun
+    finished_product_id = Column(UUID(as_uuid=True), ForeignKey('finished_products.id'), nullable=True)
+    # Recycled tranzaksiyalar uchun
+    raw_material_id = Column(UUID(as_uuid=True), ForeignKey('raw_materials.id'), nullable=True)
+
     transaction_type = Column(String(20), nullable=False)
-    # transaction_type qiymatlari:
-    #   'brak_in'      — smenadan brak tushdi
-    #   'brak_out'     — brak tegirmonga ketdi
-    #   'recycled_in'  — tegirmondan qayta ishlangan kirim
-    #   'recycled_out' — recycled smenada ishlatildi
-    stock_type = Column(String(20), nullable=False, default='brak')  # 'brak' | 'recycled' — qaysi turga tegishli
+    # Qiymatlar:
+    #   'brak_in'      — smenadan brak tushdi       (finished_product_id)
+    #   'brak_out'     — brak tegirmonga ketdi       (finished_product_id)
+    #   'recycled_in'  — tegirmondan granula kirim   (raw_material_id)
+    #   'recycled_out' — recycled smenada ishlatildi (raw_material_id)
+    stock_type = Column(String(20), nullable=False, default='brak')
     quantity = Column(Numeric(10, 2), nullable=False)
-    shift_id = Column(UUID(as_uuid=True), ForeignKey('shifts.id'), nullable=True)  # qaysi smena
+    shift_id = Column(UUID(as_uuid=True), ForeignKey('shifts.id'), nullable=True)
     notes = Column(Text, nullable=True)
     recorded_at = Column(DateTime, nullable=False)
 
     # Relationships
     scrap_stock = relationship("ScrapStock", back_populates="transactions")
     finished_product = relationship("FinishedProduct")
+    raw_material = relationship("RawMaterial")
     shift = relationship("Shift")
 
     def __repr__(self):
@@ -279,7 +309,8 @@ class ShiftScrapUsage(BaseModel):
     __tablename__ = "shift_scrap_usage"
 
     shift_id = Column(UUID(as_uuid=True), ForeignKey('shifts.id'), nullable=False)
-    finished_product_id = Column(UUID(as_uuid=True), ForeignKey('finished_products.id'), nullable=False)
+    finished_product_id = Column(UUID(as_uuid=True), ForeignKey('finished_products.id'), nullable=True)
+    raw_material_id = Column(UUID(as_uuid=True), ForeignKey('raw_materials.id'), nullable=True)
     quantity_used = Column(Numeric(10, 2), nullable=False)
     recorded_at = Column(DateTime, nullable=False)
     notes = Column(Text, nullable=True)
@@ -287,6 +318,7 @@ class ShiftScrapUsage(BaseModel):
     # Relationships
     shift = relationship("Shift", back_populates="scrap_usages")
     finished_product = relationship("FinishedProduct")
+    raw_material = relationship("RawMaterial")
 
     def __repr__(self):
         return f"<ShiftScrapUsage {self.id}>"

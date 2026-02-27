@@ -585,16 +585,10 @@ class ProductionService:
 
     def transfer_scrap_to_grinder(self, data: ScrapTransferCreate) -> dict:
         """
-        Brak mahsulotni tegirmonga o'tkazish → boshqa mahsulot (granula) chiqadi.
-
-        Jarayon:
-        1. input_product (brak) qoldiqdan kamaytirish
-        2. output_product (recycled) — BOSHQA mahsulot — qo'shiladi
-        3. Har ikki tranzaksiya yoziladi
-
-        Tizim hisoblamaydi — operator output_quantity ni o'zi kiritadi.
+        Brak (FinishedProduct) → tegirmon → Recycled (RawMaterial, atxot skladda).
+        Asosiy ombor WarehouseStock ga TEGMAYDI.
         """
-        # 1. Brak qoldiqni tekshirish (input mahsulot)
+        # 1. Brak qoldiqni tekshirish
         brak_stock = self.db.query(ScrapStock).filter(
             ScrapStock.finished_product_id == data.input_product_id,
             ScrapStock.stock_type == 'brak'
@@ -616,6 +610,7 @@ class ProductionService:
         out_txn = ScrapStockTransaction(
             scrap_stock_id=brak_stock.id,
             finished_product_id=data.input_product_id,
+            raw_material_id=None,
             transaction_type='brak_out',
             stock_type='brak',
             quantity=data.input_quantity,
@@ -624,16 +619,17 @@ class ProductionService:
         )
         self.db.add(out_txn)
 
-        # 3. Output mahsulotni recycled sifatida atxot skladga qo'shish
-        # (output_product_id != input_product_id bo'lishi mumkin)
+        # 3. Chiqadigan xom ashyo → ScrapStock (recycled, raw_material_id)
+        # Asosiy WarehouseStock GA TEGMAYDI
         recycled_stock = self.db.query(ScrapStock).filter(
-            ScrapStock.finished_product_id == data.output_product_id,
+            ScrapStock.raw_material_id == data.output_raw_material_id,
             ScrapStock.stock_type == 'recycled'
         ).first()
 
         if not recycled_stock:
             recycled_stock = ScrapStock(
-                finished_product_id=data.output_product_id,
+                finished_product_id=None,
+                raw_material_id=data.output_raw_material_id,
                 stock_type='recycled',
                 quantity=data.output_quantity,
                 last_updated=now,
@@ -646,7 +642,8 @@ class ProductionService:
 
         in_txn = ScrapStockTransaction(
             scrap_stock_id=recycled_stock.id,
-            finished_product_id=data.output_product_id,
+            finished_product_id=None,
+            raw_material_id=data.output_raw_material_id,
             transaction_type='recycled_in',
             stock_type='recycled',
             quantity=data.output_quantity,
@@ -656,10 +653,10 @@ class ProductionService:
         self.db.add(in_txn)
 
         self.db.commit()
-        self.db.refresh(in_txn)
         return {
             "brak_out": {"product_id": str(data.input_product_id), "quantity": float(data.input_quantity)},
-            "recycled_in": {"product_id": str(data.output_product_id), "quantity": float(data.output_quantity)},
+            "recycled_in": {"raw_material_id": str(data.output_raw_material_id),
+                            "quantity": float(data.output_quantity)},
         }
 
     # ============ SHIFT SCRAP USAGE ============
@@ -674,11 +671,20 @@ class ProductionService:
             raise BadRequestException(detail="Faqat faol smenada material olish mumkin")
 
         stock_type = data.stock_type if hasattr(data, 'stock_type') and data.stock_type else 'recycled'
+        now = datetime.utcnow()
 
-        scrap = self.db.query(ScrapStock).filter(
-            ScrapStock.finished_product_id == data.finished_product_id,
-            ScrapStock.stock_type == stock_type
-        ).first()
+        if stock_type == 'brak':
+            # Brak — finished_product_id bo'yicha
+            scrap = self.db.query(ScrapStock).filter(
+                ScrapStock.finished_product_id == data.finished_product_id,
+                ScrapStock.stock_type == 'brak'
+            ).first()
+        else:
+            # Recycled — raw_material_id bo'yicha
+            scrap = self.db.query(ScrapStock).filter(
+                ScrapStock.raw_material_id == data.raw_material_id,
+                ScrapStock.stock_type == 'recycled'
+            ).first()
 
         if not scrap or scrap.quantity < data.quantity_used:
             avail = scrap.quantity if scrap else 0
@@ -686,28 +692,29 @@ class ProductionService:
                 detail=f"Yetarli {stock_type} atxot yo'q. Mavjud: {avail}, So'ralgan: {data.quantity_used}"
             )
 
-        # Kamaytirish
         scrap.quantity -= data.quantity_used
-        scrap.last_updated = datetime.utcnow()
+        scrap.last_updated = now
 
         txn_type = 'brak_out' if stock_type == 'brak' else 'recycled_out'
         txn = ScrapStockTransaction(
             scrap_stock_id=scrap.id,
-            finished_product_id=data.finished_product_id,
+            finished_product_id=data.finished_product_id if stock_type == 'brak' else None,
+            raw_material_id=data.raw_material_id if stock_type == 'recycled' else None,
             transaction_type=txn_type,
             stock_type=stock_type,
             quantity=data.quantity_used,
             shift_id=shift_id,
             notes=data.notes,
-            recorded_at=datetime.utcnow(),
+            recorded_at=now,
         )
         self.db.add(txn)
 
         usage = ShiftScrapUsage(
             shift_id=shift_id,
-            finished_product_id=data.finished_product_id,
+            finished_product_id=data.finished_product_id if stock_type == 'brak' else None,
+            raw_material_id=data.raw_material_id if stock_type == 'recycled' else None,
             quantity_used=data.quantity_used,
-            recorded_at=datetime.utcnow(),
+            recorded_at=now,
             notes=data.notes,
         )
         self.db.add(usage)

@@ -322,15 +322,19 @@ class ShiftPauseResponse(BaseIDSchema):
 # ============ SCRAP STOCK SCHEMAS ============
 
 class ScrapStockResponse(BaseIDSchema):
-    finished_product_id: UUID
+    finished_product_id: Optional[UUID] = None  # brak uchun
+    raw_material_id: Optional[UUID] = None  # recycled uchun
     stock_type: str  # 'brak' | 'recycled'
     quantity: Decimal
     last_updated: datetime
     finished_product: Optional[FinishedProductResponse] = None
+    # raw_material inline (import aylanmaslik uchun dict sifatida)
+    raw_material: Optional[dict] = None
 
 
 class ScrapStockTransactionResponse(BaseIDSchema):
-    finished_product_id: UUID
+    finished_product_id: Optional[UUID] = None
+    raw_material_id: Optional[UUID] = None
     transaction_type: str  # brak_in, brak_out, recycled_in, recycled_out
     stock_type: str  # 'brak' | 'recycled'
     quantity: Decimal
@@ -338,30 +342,34 @@ class ScrapStockTransactionResponse(BaseIDSchema):
     notes: Optional[str] = None
     recorded_at: datetime
     finished_product: Optional[FinishedProductResponse] = None
+    raw_material: Optional[dict] = None
 
 
 class ScrapTransferCreate(BaseSchema):
     """Atxotni tegirmonga o'tkazish.
 
-    Brak mahsulot (masalan PVC quvur) tegirmonga kirib,
-    boshqa mahsulot (masalan PVC granula) chiqadi.
-    Operator chiqadigan miqdorni o'zi yozadi.
+    Kirish: brak (FinishedProduct) → tegirmon → Chiqish: recycled (RawMaterial)
+    Chiqish mahsulot asosiy ombor ga TUSHMAYDI — atxot skladda recycled sifatida saqlanadi.
+    Operator chiqadigan miqdorni o'zi yozadi, tizim hisoblamaydi.
     """
-    # Kirish: brak mahsulot
-    input_product_id: UUID  # PVC quvur (brak)
-    input_quantity: Decimal  # necha kg brak kirdi
-    # Chiqish: granula yoki boshqa mahsulot
-    output_product_id: UUID  # PVC granula (recycled) — boshqa mahsulot bo'lishi mumkin
-    output_quantity: Decimal  # necha kg/litr chiqdi — operator yozadi
+    # Kirish: brak tayyor mahsulot (PVC quvur, kg)
+    input_product_id: UUID  # FinishedProduct.id
+    input_quantity: Decimal
+    # Chiqish: xom ashyo (PVC granula, kg) — RawMaterial dan tanlanadi
+    output_raw_material_id: UUID  # RawMaterial.id — asosiy ombor GA EMAS
+    output_quantity: Decimal  # operator yozadi
     notes: Optional[str] = None
 
 
 # ============ SHIFT SCRAP USAGE SCHEMAS ============
 
 class ShiftScrapUsageCreate(BaseSchema):
-    finished_product_id: UUID
+    # brak uchun
+    finished_product_id: Optional[UUID] = None
+    # recycled uchun (raw material — asosiy ombor GA EMAS)
+    raw_material_id: Optional[UUID] = None
     quantity_used: Decimal
-    stock_type: str = 'recycled'  # 'brak' yoki 'recycled'
+    stock_type: str = 'recycled'  # 'brak' | 'recycled'
     notes: Optional[str] = None
 
 
