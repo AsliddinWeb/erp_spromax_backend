@@ -162,6 +162,19 @@ class SalesService:
 
         self.db.commit()
         self.db.refresh(order)
+
+        # Bildirishnoma yuborish
+        try:
+            from app.services.notification_service import NotificationService
+            notif_service = NotificationService(self.db)
+            notif_service.notify_new_order(
+                customer_name=customer.name,
+                total_amount=float(total_amount),
+                order_id=order.id
+            )
+        except Exception:
+            pass
+
         return order
 
     def get_order(self, order_id: UUID) -> Order:

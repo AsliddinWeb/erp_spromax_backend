@@ -397,3 +397,18 @@ class WarehouseService:
         stock.quantity -= quantity
         stock.last_updated = datetime.utcnow()
         self.db.commit()
+
+        # Low stock tekshirish va bildirishnoma
+        try:
+            material = self.material_repo.get_by_id(material_id)
+            if material and stock.quantity <= material.minimum_stock:
+                from app.services.notification_service import NotificationService
+                notif_service = NotificationService(self.db)
+                notif_service.notify_low_stock(
+                    material_name=material.name,
+                    current_qty=float(stock.quantity),
+                    min_qty=float(material.minimum_stock),
+                    material_id=material_id
+                )
+        except Exception:
+            pass

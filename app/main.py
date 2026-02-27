@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from app.config import settings
-from app.api.v1 import auth, users, warehouse, production, sales, finance, hr, maintenance, analytics
+from app.api.v1 import auth, users, warehouse, production, sales, finance, hr, maintenance, analytics, notifications
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -30,6 +30,7 @@ app.include_router(finance.router, prefix=settings.API_V1_PREFIX)
 app.include_router(hr.router, prefix=settings.API_V1_PREFIX)
 app.include_router(maintenance.router, prefix=settings.API_V1_PREFIX)
 app.include_router(analytics.router, prefix=settings.API_V1_PREFIX)
+app.include_router(notifications.router, prefix=settings.API_V1_PREFIX)
 
 
 def custom_openapi():

@@ -241,6 +241,20 @@ class HRService:
         except Exception:
             pass  # Moliya xatosi asosiy to'lovni bloklamasin
 
+        # ✅ Xodimga bildirishnoma
+        try:
+            from app.services.notification_service import NotificationService
+            notif_service = NotificationService(self.db)
+            full_name = f"{employee.first_name} {employee.last_name}"
+            notif_service.notify_salary_payment(
+                employee_name=full_name,
+                amount=float(total_amount),
+                employee_user_id=employee.user_id,
+                payment_id=salary_payment.id
+            )
+        except Exception:
+            pass
+
         return salary_payment
 
     # ============ BATCH SALARY METHODS ============
@@ -415,6 +429,7 @@ class HRService:
         new_request = LeaveRequest(
             employee_id=leave_data.employee_id,
             leave_type=leave_data.leave_type,
+            is_paid=getattr(leave_data, 'is_paid', False),
             start_date=leave_data.start_date,
             end_date=leave_data.end_date,
             days_count=days_count,
@@ -422,7 +437,22 @@ class HRService:
             status='pending'
         )
 
-        return self.leave_repo.create(new_request)
+        leave_request = self.leave_repo.create(new_request)
+
+        # Bildirishnoma
+        try:
+            from app.services.notification_service import NotificationService
+            notif_service = NotificationService(self.db)
+            full_name = f"{employee.first_name} {employee.last_name}"
+            notif_service.notify_leave_request(
+                employee_name=full_name,
+                days_count=days_count,
+                request_id=leave_request.id
+            )
+        except Exception:
+            pass
+
+        return leave_request
 
     def get_leave_request(self, request_id: UUID) -> LeaveRequest:
         """So'rov olish"""
