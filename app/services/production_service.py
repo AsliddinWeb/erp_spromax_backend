@@ -565,19 +565,13 @@ class ProductionService:
     # ============ SCRAP STOCK METHODS ============
 
     def get_all_scrap_stock(self) -> List[ScrapStock]:
-        """Barcha atxot qoldiqlari"""
+        """Barcha atxot qoldiqlari (brak va recycled alohida)"""
         from sqlalchemy.orm import joinedload
         return self.db.query(ScrapStock).options(
             joinedload(ScrapStock.finished_product)
-        ).all()
+        ).order_by(ScrapStock.stock_type, ScrapStock.finished_product_id).all()
 
-    def get_scrap_stock_by_product(self, product_id: UUID) -> Optional[ScrapStock]:
-        """Mahsulot bo'yicha atxot qoldiq"""
-        return self.db.query(ScrapStock).filter(
-            ScrapStock.finished_product_id == product_id
-        ).first()
-
-    def get_scrap_transactions(self, product_id: Optional[UUID] = None) -> List[ScrapStockTransaction]:
+    def get_scrap_transactions(self, product_id=None, stock_type=None) -> List[ScrapStockTransaction]:
         """Atxot tarixi"""
         from sqlalchemy.orm import joinedload
         q = self.db.query(ScrapStockTransaction).options(
@@ -585,65 +579,117 @@ class ProductionService:
         )
         if product_id:
             q = q.filter(ScrapStockTransaction.finished_product_id == product_id)
+        if stock_type:
+            q = q.filter(ScrapStockTransaction.stock_type == stock_type)
         return q.order_by(ScrapStockTransaction.recorded_at.desc()).limit(200).all()
 
     def transfer_scrap_to_grinder(self, data: ScrapTransferCreate) -> ScrapStockTransaction:
-        """Atxotni tegirmonga o'tkazish (recycled → qayta ishlatiladi)"""
-        scrap = self.db.query(ScrapStock).filter(
-            ScrapStock.finished_product_id == data.finished_product_id
+        """
+        Brak atxotni tegirmonga o'tkazish.
+
+        Jarayon:
+        1. brak qoldiqdan kamaytirish
+        2. recycled qoldiqqa qo'shish
+        3. Har ikki tur uchun tranzaksiya yozish
+        """
+        # 1. Brak qoldiqni topish
+        brak_stock = self.db.query(ScrapStock).filter(
+            ScrapStock.finished_product_id == data.finished_product_id,
+            ScrapStock.stock_type == 'brak'
         ).first()
-        if not scrap:
-            raise NotFoundException(detail="Atxot qoldiq topilmadi")
-        if scrap.quantity < data.quantity:
+
+        if not brak_stock:
+            raise NotFoundException(detail="Brak atxot qoldiq topilmadi")
+        if brak_stock.quantity < data.quantity:
             raise BadRequestException(
-                detail=f"Yetarli atxot yo'q. Mavjud: {scrap.quantity}, So'ralgan: {data.quantity}"
+                detail=f"Yetarli brak yo'q. Mavjud: {brak_stock.quantity}, So'ralgan: {data.quantity}"
             )
 
-        # Scrap kamaytirish
-        scrap.quantity -= data.quantity
-        scrap.last_updated = datetime.utcnow()
+        # 2. Brak kamaytirish
+        brak_stock.quantity -= data.quantity
+        brak_stock.last_updated = datetime.utcnow()
 
-        # Tranzaksiya yozish
-        txn = ScrapStockTransaction(
-            scrap_stock_id=scrap.id,
+        # Brak chiqim tranzaksiyasi
+        out_txn = ScrapStockTransaction(
+            scrap_stock_id=brak_stock.id,
             finished_product_id=data.finished_product_id,
-            transaction_type='recycled',
+            transaction_type='brak_out',
+            stock_type='brak',
             quantity=data.quantity,
             notes=data.notes,
             recorded_at=datetime.utcnow(),
         )
-        self.db.add(txn)
-        self.db.commit()
-        self.db.refresh(txn)
-        return txn
+        self.db.add(out_txn)
 
-    # ============ SHIFT SCRAP USAGE (smenada atxotdan olish) ============
+        # 3. Recycled qoldiqqa qo'shish
+        recycled_stock = self.db.query(ScrapStock).filter(
+            ScrapStock.finished_product_id == data.finished_product_id,
+            ScrapStock.stock_type == 'recycled'
+        ).first()
+
+        if not recycled_stock:
+            recycled_stock = ScrapStock(
+                finished_product_id=data.finished_product_id,
+                stock_type='recycled',
+                quantity=data.quantity,
+                last_updated=datetime.utcnow(),
+            )
+            self.db.add(recycled_stock)
+            self.db.flush()
+        else:
+            recycled_stock.quantity += data.quantity
+            recycled_stock.last_updated = datetime.utcnow()
+
+        # Recycled kirim tranzaksiyasi
+        in_txn = ScrapStockTransaction(
+            scrap_stock_id=recycled_stock.id,
+            finished_product_id=data.finished_product_id,
+            transaction_type='recycled_in',
+            stock_type='recycled',
+            quantity=data.quantity,
+            notes=data.notes,
+            recorded_at=datetime.utcnow(),
+        )
+        self.db.add(in_txn)
+
+        self.db.commit()
+        self.db.refresh(in_txn)
+        return in_txn
+
+    # ============ SHIFT SCRAP USAGE ============
 
     def use_scrap_in_shift(self, shift_id: UUID, data: ShiftScrapUsageCreate) -> ShiftScrapUsage:
-        """Smena davomida atxot skladdan material olish"""
+        """
+        Smena davomida atxot skladdan material olish.
+        stock_type: 'brak' yoki 'recycled'
+        """
         shift = self.get_shift(shift_id)
         if shift.status != 'active':
             raise BadRequestException(detail="Faqat faol smenada material olish mumkin")
 
-        # Atxot qoldiq tekshirish
+        stock_type = data.stock_type if hasattr(data, 'stock_type') and data.stock_type else 'recycled'
+
         scrap = self.db.query(ScrapStock).filter(
-            ScrapStock.finished_product_id == data.finished_product_id
+            ScrapStock.finished_product_id == data.finished_product_id,
+            ScrapStock.stock_type == stock_type
         ).first()
+
         if not scrap or scrap.quantity < data.quantity_used:
             avail = scrap.quantity if scrap else 0
             raise BadRequestException(
-                detail=f"Yetarli atxot yo'q. Mavjud: {avail}, So'ralgan: {data.quantity_used}"
+                detail=f"Yetarli {stock_type} atxot yo'q. Mavjud: {avail}, So'ralgan: {data.quantity_used}"
             )
 
-        # Atxot kamaytirish
+        # Kamaytirish
         scrap.quantity -= data.quantity_used
         scrap.last_updated = datetime.utcnow()
 
-        # Tranzaksiya
+        txn_type = 'brak_out' if stock_type == 'brak' else 'recycled_out'
         txn = ScrapStockTransaction(
             scrap_stock_id=scrap.id,
             finished_product_id=data.finished_product_id,
-            transaction_type='out',
+            transaction_type=txn_type,
+            stock_type=stock_type,
             quantity=data.quantity_used,
             shift_id=shift_id,
             notes=data.notes,
@@ -651,7 +697,6 @@ class ProductionService:
         )
         self.db.add(txn)
 
-        # ShiftScrapUsage yozish
         usage = ShiftScrapUsage(
             shift_id=shift_id,
             finished_product_id=data.finished_product_id,
@@ -743,29 +788,34 @@ class ProductionService:
 
     def _update_scrap_stock_add(
             self, product_id: UUID, quantity: Decimal,
+            stock_type: str = 'brak',
             shift_id: Optional[UUID] = None, notes: Optional[str] = None
     ):
-        """Atxot stokka qo'shish yoki yangilash"""
+        """Atxot stokka qo'shish yoki yangilash (default: brak)"""
         scrap = self.db.query(ScrapStock).filter(
-            ScrapStock.finished_product_id == product_id
+            ScrapStock.finished_product_id == product_id,
+            ScrapStock.stock_type == stock_type
         ).first()
 
         if not scrap:
             scrap = ScrapStock(
                 finished_product_id=product_id,
+                stock_type=stock_type,
                 quantity=quantity,
                 last_updated=datetime.utcnow(),
             )
             self.db.add(scrap)
-            self.db.flush()  # id olish uchun
+            self.db.flush()
         else:
             scrap.quantity += quantity
             scrap.last_updated = datetime.utcnow()
 
+        txn_type = 'brak_in' if stock_type == 'brak' else 'recycled_in'
         txn = ScrapStockTransaction(
             scrap_stock_id=scrap.id,
             finished_product_id=product_id,
-            transaction_type='in',
+            transaction_type=txn_type,
+            stock_type=stock_type,
             quantity=quantity,
             shift_id=shift_id,
             notes=notes,

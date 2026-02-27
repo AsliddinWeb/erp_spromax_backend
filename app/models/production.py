@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, ForeignKey, Numeric, DateTime, Integer, Text
+from sqlalchemy import Column, String, ForeignKey, Numeric, DateTime, Integer, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from app.models.base import BaseModel
@@ -53,7 +53,6 @@ class FinishedProduct(BaseModel):
     # Relationships
     production_outputs = relationship("ProductionOutput", back_populates="finished_product")
     finished_product_stock = relationship("FinishedProductStock", back_populates="finished_product", uselist=False)
-    scrap_stock = relationship("ScrapStock", back_populates="finished_product", uselist=False)
 
     def __repr__(self):
         return f"<FinishedProduct {self.name}>"
@@ -223,19 +222,29 @@ class ShiftPause(BaseModel):
 
 
 class ScrapStock(BaseModel):
-    """Atxot mini sklad — mahsulot turi bo'yicha qoldiq"""
+    """Atxot mini sklad — mahsulot va tur bo'yicha qoldiq
+
+    stock_type:
+      - 'brak'     : smenadan tushgan yaroqsiz mahsulotlar
+      - 'recycled' : tegirmondan chiqqan qayta ishlangan xom ashyo
+    """
     __tablename__ = "scrap_stock"
 
-    finished_product_id = Column(UUID(as_uuid=True), ForeignKey('finished_products.id'), nullable=False, unique=True)
+    finished_product_id = Column(UUID(as_uuid=True), ForeignKey('finished_products.id'), nullable=False)
+    stock_type = Column(String(20), nullable=False, default='brak')  # 'brak' | 'recycled'
     quantity = Column(Numeric(10, 2), nullable=False, default=0)
     last_updated = Column(DateTime, nullable=False)
 
+    __table_args__ = (
+        UniqueConstraint('finished_product_id', 'stock_type', name='uq_scrap_product_type'),
+    )
+
     # Relationships
-    finished_product = relationship("FinishedProduct", back_populates="scrap_stock")
+    finished_product = relationship("FinishedProduct")
     transactions = relationship("ScrapStockTransaction", back_populates="scrap_stock")
 
     def __repr__(self):
-        return f"<ScrapStock {self.finished_product_id}: {self.quantity}>"
+        return f"<ScrapStock {self.finished_product_id} [{self.stock_type}]: {self.quantity}>"
 
 
 class ScrapStockTransaction(BaseModel):
@@ -244,8 +253,13 @@ class ScrapStockTransaction(BaseModel):
 
     scrap_stock_id = Column(UUID(as_uuid=True), ForeignKey('scrap_stock.id'), nullable=False)
     finished_product_id = Column(UUID(as_uuid=True), ForeignKey('finished_products.id'), nullable=False)
-    transaction_type = Column(String(20),
-                              nullable=False)  # 'in' (atxot tushdi), 'out' (qayta ishlash uchun olindi), 'recycled' (tegirmonga ketdi)
+    transaction_type = Column(String(20), nullable=False)
+    # transaction_type qiymatlari:
+    #   'brak_in'      — smenadan brak tushdi
+    #   'brak_out'     — brak tegirmonga ketdi
+    #   'recycled_in'  — tegirmondan qayta ishlangan kirim
+    #   'recycled_out' — recycled smenada ishlatildi
+    stock_type = Column(String(20), nullable=False, default='brak')  # 'brak' | 'recycled' — qaysi turga tegishli
     quantity = Column(Numeric(10, 2), nullable=False)
     shift_id = Column(UUID(as_uuid=True), ForeignKey('shifts.id'), nullable=True)  # qaysi smena
     notes = Column(Text, nullable=True)

@@ -321,6 +321,7 @@ class ShiftPauseResponse(BaseIDSchema):
 
 class ScrapStockResponse(BaseIDSchema):
     finished_product_id: UUID
+    stock_type: str  # 'brak' | 'recycled'
     quantity: Decimal
     last_updated: datetime
     finished_product: Optional[FinishedProductResponse] = None
@@ -328,7 +329,8 @@ class ScrapStockResponse(BaseIDSchema):
 
 class ScrapStockTransactionResponse(BaseIDSchema):
     finished_product_id: UUID
-    transaction_type: str  # in, out, recycled
+    transaction_type: str  # brak_in, brak_out, recycled_in, recycled_out
+    stock_type: str         # 'brak' | 'recycled'
     quantity: Decimal
     shift_id: Optional[UUID] = None
     notes: Optional[str] = None
@@ -348,6 +350,7 @@ class ScrapTransferCreate(BaseSchema):
 class ShiftScrapUsageCreate(BaseSchema):
     finished_product_id: UUID
     quantity_used: Decimal
+    stock_type: str = 'recycled'  # 'brak' yoki 'recycled'
     notes: Optional[str] = None
 
 
