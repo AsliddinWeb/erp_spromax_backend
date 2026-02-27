@@ -43,7 +43,7 @@ async def create_category(
 @router.get("/categories", response_model=List[TransactionCategoryResponse])
 async def get_categories(
         skip: int = Query(0, ge=0),
-        limit: int = Query(100, ge=1, le=100),
+        limit: int = Query(100, ge=1, le=1000),
         category_type: Optional[str] = Query(None, pattern="^(income|expense)$"),
         db: Session = Depends(get_db),
         current_user: User = Depends(require_permission(PermissionType.READ_FINANCE))
@@ -112,7 +112,7 @@ async def create_transaction(
 @router.get("/transactions", response_model=List[FinancialTransactionResponse])
 async def get_transactions(
         skip: int = Query(0, ge=0),
-        limit: int = Query(100, ge=1, le=100),
+        limit: int = Query(100, ge=1, le=1000),
         transaction_type: Optional[str] = Query(None, pattern="^(income|expense)$"),
         start_date: Optional[datetime] = Query(None),
         end_date: Optional[datetime] = Query(None),
