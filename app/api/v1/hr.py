@@ -275,30 +275,6 @@ async def create_salary_payment(
     return service.create_salary_payment(payment_data, current_user.id)
 
 
-@router.get("/salary-payments/{payment_id}", response_model=SalaryPaymentResponse)
-async def get_salary_payment(
-        payment_id: UUID,
-        db: Session = Depends(get_db),
-        current_user: User = Depends(require_permission(PermissionType.READ_HR))
-):
-    """Bitta to'lov ma'lumotlari"""
-    service = HRService(db)
-    return service.get_salary_payment(payment_id)
-
-
-@router.get("/employees/{employee_id}/salary-payments", response_model=List[SalaryPaymentResponse])
-async def get_employee_salary_payments(
-        employee_id: UUID,
-        skip: int = Query(0, ge=0),
-        limit: int = Query(100, ge=1, le=100),
-        db: Session = Depends(get_db),
-        current_user: User = Depends(require_permission(PermissionType.READ_HR))
-):
-    """Xodim ish haqi to'lovlari tarixi"""
-    service = HRService(db)
-    return service.get_employee_salary_payments(employee_id, skip=skip, limit=limit)
-
-
 @router.get("/salary-payments/calculate-preview", response_model=List[SalaryPreviewItem])
 async def calculate_salary_preview(
         month: str = Query(..., pattern=r"^\d{4}-\d{2}$", description="Format: 2026-02"),
@@ -329,6 +305,30 @@ async def batch_salary_payment(
     """
     service = HRService(db)
     return service.batch_salary_payment(batch_data, current_user.id)
+
+
+@router.get("/salary-payments/{payment_id}", response_model=SalaryPaymentResponse)
+async def get_salary_payment(
+        payment_id: UUID,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.READ_HR))
+):
+    """Bitta to'lov ma'lumotlari"""
+    service = HRService(db)
+    return service.get_salary_payment(payment_id)
+
+
+@router.get("/employees/{employee_id}/salary-payments", response_model=List[SalaryPaymentResponse])
+async def get_employee_salary_payments(
+        employee_id: UUID,
+        skip: int = Query(0, ge=0),
+        limit: int = Query(100, ge=1, le=100),
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.READ_HR))
+):
+    """Xodim ish haqi to'lovlari tarixi"""
+    service = HRService(db)
+    return service.get_employee_salary_payments(employee_id, skip=skip, limit=limit)
 
 
 # ============ LEAVE REQUEST ENDPOINTS ============
