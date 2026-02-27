@@ -62,9 +62,26 @@ class SalesService:
             raise NotFoundException(detail="Mijoz topilmadi")
         return customer
 
-    def get_all_customers(self, skip: int = 0, limit: int = 100) -> List[Customer]:
-        """Barcha mijozlar"""
-        return self.customer_repo.get_all(skip=skip, limit=limit)
+    def get_all_customers(self, skip: int = 0, limit: int = 100):
+        """Barcha mijozlar — total_orders va total_spent bilan"""
+        try:
+            customers = self.customer_repo.get_all_with_stats(skip=skip, limit=limit)
+            total = self.customer_repo.count_all()
+        except Exception:
+            # Fallback: oddiy ro'yxat
+            customers_orm = self.customer_repo.get_all(skip=skip, limit=limit)
+            customers = [
+                {
+                    "id": str(c.id), "name": c.name, "phone": c.phone,
+                    "email": c.email, "inn": c.inn, "address": c.address,
+                    "contact_person": c.contact_person, "customer_type": c.customer_type,
+                    "is_active": c.is_active, "created_at": c.created_at,
+                    "updated_at": c.updated_at, "total_orders": 0, "total_spent": 0,
+                }
+                for c in customers_orm
+            ]
+            total = self.customer_repo.count()
+        return {"customers": customers, "total": total}
 
     def update_customer(self, customer_id: UUID, customer_data: CustomerUpdate) -> Customer:
         """Mijoz yangilash"""

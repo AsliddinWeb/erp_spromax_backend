@@ -51,8 +51,8 @@ async def get_customers(
     """Barcha mijozlar ro'yxati — total_orders va total_spent bilan"""
     service = SalesService(db)
     actual_skip = (page - 1) * limit if page > 1 else skip
-    customers, total = service.get_all_customers(skip=actual_skip, limit=limit)
-    return {"items": customers, "total": total, "page": page, "limit": limit}
+    result = service.get_all_customers(skip=actual_skip, limit=limit)
+    return {"items": result["customers"], "total": result["total"], "page": page, "limit": limit}
 
 
 @router.get("/customers/{customer_id}", response_model=CustomerResponse)
