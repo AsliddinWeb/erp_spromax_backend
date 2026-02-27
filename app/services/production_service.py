@@ -564,18 +564,27 @@ class ProductionService:
 
     # ============ SCRAP STOCK METHODS ============
 
+    def get_all_finished_stock(self) -> List[FinishedProductStock]:
+        """Barcha tayyor mahsulot ombori"""
+        from sqlalchemy.orm import joinedload
+        return self.db.query(FinishedProductStock).options(
+            joinedload(FinishedProductStock.finished_product)
+        ).order_by(FinishedProductStock.last_updated.desc()).all()
+
     def get_all_scrap_stock(self) -> List[ScrapStock]:
         """Barcha atxot qoldiqlari (brak va recycled alohida)"""
         from sqlalchemy.orm import joinedload
         return self.db.query(ScrapStock).options(
-            joinedload(ScrapStock.finished_product)
-        ).order_by(ScrapStock.stock_type, ScrapStock.finished_product_id).all()
+            joinedload(ScrapStock.finished_product),
+            joinedload(ScrapStock.raw_material),
+        ).order_by(ScrapStock.stock_type).all()
 
     def get_scrap_transactions(self, product_id=None, stock_type=None) -> List[ScrapStockTransaction]:
         """Atxot tarixi"""
         from sqlalchemy.orm import joinedload
         q = self.db.query(ScrapStockTransaction).options(
-            joinedload(ScrapStockTransaction.finished_product)
+            joinedload(ScrapStockTransaction.finished_product),
+            joinedload(ScrapStockTransaction.raw_material),
         )
         if product_id:
             q = q.filter(ScrapStockTransaction.finished_product_id == product_id)

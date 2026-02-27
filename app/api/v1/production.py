@@ -551,6 +551,18 @@ async def close_shift(
     return service.close_shift(shift_id, data)
 
 
+# ============ FINISHED PRODUCT STOCK ENDPOINTS ============
+
+@router.get("/finished-stock", response_model=List[FinishedProductStockResponse])
+async def get_finished_stock(
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.READ_PRODUCTION))
+):
+    """Tayyor mahsulot ombori — barcha qoldiqlar"""
+    service = ProductionService(db)
+    return service.get_all_finished_stock()
+
+
 # ============ SCRAP STOCK ENDPOINTS ============
 
 @router.get("/scrap-stock", response_model=List[ScrapStockResponse])
