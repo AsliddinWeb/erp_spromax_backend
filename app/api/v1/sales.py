@@ -31,32 +31,35 @@ router = APIRouter(prefix="/sales", tags=["Sales"])
 
 @router.post("/customers", response_model=CustomerResponse, status_code=status.HTTP_201_CREATED)
 async def create_customer(
-    customer_data: CustomerCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.WRITE_SALES))
+        customer_data: CustomerCreate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.WRITE_SALES))
 ):
     """Yangi mijoz qo'shish"""
     service = SalesService(db)
     return service.create_customer(customer_data)
 
 
-@router.get("/customers", response_model=List[CustomerResponse])
+@router.get("/customers")
 async def get_customers(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=100),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.READ_SALES))
+        skip: int = Query(0, ge=0),
+        limit: int = Query(100, ge=1, le=100),
+        page: int = Query(1, ge=1),
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.READ_SALES))
 ):
-    """Barcha mijozlar ro'yxati"""
+    """Barcha mijozlar ro'yxati — total_orders va total_spent bilan"""
     service = SalesService(db)
-    return service.get_all_customers(skip=skip, limit=limit)
+    actual_skip = (page - 1) * limit if page > 1 else skip
+    customers, total = service.get_all_customers(skip=actual_skip, limit=limit)
+    return {"items": customers, "total": total, "page": page, "limit": limit}
 
 
 @router.get("/customers/{customer_id}", response_model=CustomerResponse)
 async def get_customer(
-    customer_id: UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.READ_SALES))
+        customer_id: UUID,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.READ_SALES))
 ):
     """Bitta mijoz ma'lumotlari"""
     service = SalesService(db)
@@ -65,10 +68,10 @@ async def get_customer(
 
 @router.put("/customers/{customer_id}", response_model=CustomerResponse)
 async def update_customer(
-    customer_id: UUID,
-    customer_data: CustomerUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.WRITE_SALES))
+        customer_id: UUID,
+        customer_data: CustomerUpdate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.WRITE_SALES))
 ):
     """Mijoz ma'lumotlarini yangilash"""
     service = SalesService(db)
@@ -77,9 +80,9 @@ async def update_customer(
 
 @router.delete("/customers/{customer_id}", status_code=status.HTTP_200_OK)
 async def delete_customer(
-    customer_id: UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.WRITE_SALES))
+        customer_id: UUID,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.WRITE_SALES))
 ):
     """Mijozni o'chirish"""
     service = SalesService(db)
@@ -89,9 +92,9 @@ async def delete_customer(
 
 @router.get("/customers/{customer_id}/statistics", response_model=CustomerStatistics)
 async def get_customer_statistics(
-    customer_id: UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.READ_SALES))
+        customer_id: UUID,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.READ_SALES))
 ):
     """Mijoz statistikasi"""
     service = SalesService(db)
@@ -102,13 +105,13 @@ async def get_customer_statistics(
 
 @router.post("/orders", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
 async def create_order(
-    order_data: OrderCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.WRITE_SALES))
+        order_data: OrderCreate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.WRITE_SALES))
 ):
     """
     Yangi buyurtma yaratish
-    
+
     Mijozdan buyurtma qabul qilish va mahsulotlarni rezerv qilish.
     """
     service = SalesService(db)
@@ -117,12 +120,12 @@ async def create_order(
 
 @router.get("/orders", response_model=List[OrderResponse])
 async def get_orders(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=100),
-    payment_status: Optional[str] = Query(None),
-    delivery_status: Optional[str] = Query(None),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.READ_SALES))
+        skip: int = Query(0, ge=0),
+        limit: int = Query(100, ge=1, le=100),
+        payment_status: Optional[str] = Query(None),
+        delivery_status: Optional[str] = Query(None),
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.READ_SALES))
 ):
     """Barcha buyurtmalar ro'yxati"""
     service = SalesService(db)
@@ -136,9 +139,9 @@ async def get_orders(
 
 @router.get("/orders/{order_id}", response_model=OrderResponse)
 async def get_order(
-    order_id: UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.READ_SALES))
+        order_id: UUID,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.READ_SALES))
 ):
     """Bitta buyurtma ma'lumotlari"""
     service = SalesService(db)
@@ -147,14 +150,14 @@ async def get_order(
 
 @router.put("/orders/{order_id}", response_model=OrderResponse)
 async def update_order(
-    order_id: UUID,
-    order_data: OrderUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.WRITE_SALES))
+        order_id: UUID,
+        order_data: OrderUpdate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.WRITE_SALES))
 ):
     """
     Buyurtma yangilash
-    
+
     Delivery status o'zgarishi bilan stock avtomatik yangilanadi.
     """
     service = SalesService(db)
@@ -163,9 +166,9 @@ async def update_order(
 
 @router.delete("/orders/{order_id}", status_code=status.HTTP_200_OK)
 async def delete_order(
-    order_id: UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.WRITE_SALES))
+        order_id: UUID,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.WRITE_SALES))
 ):
     """Buyurtmani bekor qilish"""
     service = SalesService(db)
@@ -175,11 +178,11 @@ async def delete_order(
 
 @router.get("/customers/{customer_id}/orders", response_model=List[OrderResponse])
 async def get_customer_orders(
-    customer_id: UUID,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=100),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.READ_SALES))
+        customer_id: UUID,
+        skip: int = Query(0, ge=0),
+        limit: int = Query(100, ge=1, le=100),
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.READ_SALES))
 ):
     """Mijoz buyurtmalari"""
     service = SalesService(db)
@@ -190,13 +193,13 @@ async def get_customer_orders(
 
 @router.post("/payments", response_model=PaymentResponse, status_code=status.HTTP_201_CREATED)
 async def create_payment(
-    payment_data: PaymentCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.WRITE_SALES))
+        payment_data: PaymentCreate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.WRITE_SALES))
 ):
     """
     To'lov qo'shish
-    
+
     Mijoz to'lov qilganda buyurtma payment_status avtomatik yangilanadi.
     """
     service = SalesService(db)
@@ -205,9 +208,9 @@ async def create_payment(
 
 @router.get("/orders/{order_id}/payments", response_model=List[PaymentResponse])
 async def get_order_payments(
-    order_id: UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.READ_SALES))
+        order_id: UUID,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.READ_SALES))
 ):
     """Buyurtma to'lovlari tarixi"""
     service = SalesService(db)
@@ -218,8 +221,8 @@ async def get_order_payments(
 
 @router.get("/statistics", response_model=SalesStatistics)
 async def get_statistics(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.READ_SALES))
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.READ_SALES))
 ):
     """Sotuv statistikasi"""
     service = SalesService(db)

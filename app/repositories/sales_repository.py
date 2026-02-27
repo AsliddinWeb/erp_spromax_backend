@@ -26,6 +26,60 @@ class CustomerRepository(BaseRepository[Customer]):
             Customer.is_active == True
         ).first()
 
+    def get_all_with_stats(self, skip: int = 0, limit: int = 100) -> List[Customer]:
+        """Barcha mijozlar total_orders va total_spent bilan"""
+        from sqlalchemy import outerjoin
+
+        order_stats = (
+            self.db.query(
+                Order.customer_id,
+                func.count(Order.id).label("total_orders"),
+                func.coalesce(func.sum(Order.total_amount), 0).label("total_spent"),
+                func.max(Order.created_at).label("last_order_date"),
+            )
+            .filter(Order.is_active == True)
+            .group_by(Order.customer_id)
+            .subquery()
+        )
+
+        rows = (
+            self.db.query(
+                Customer,
+                func.coalesce(order_stats.c.total_orders, 0).label("total_orders"),
+                func.coalesce(order_stats.c.total_spent, 0).label("total_spent"),
+                order_stats.c.last_order_date,
+            )
+            .outerjoin(order_stats, Customer.id == order_stats.c.customer_id)
+            .order_by(desc(order_stats.c.total_spent.is_(None)), desc(order_stats.c.total_spent))
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
+        customers = []
+        for row in rows:
+            customer = row[0]
+            # dict sifatida qaytaramiz — SQLAlchemy serialize muammosini oldini olish
+            customers.append({
+                "id": str(customer.id),
+                "name": customer.name,
+                "phone": customer.phone,
+                "email": customer.email,
+                "inn": customer.inn,
+                "address": customer.address,
+                "contact_person": customer.contact_person,
+                "customer_type": customer.customer_type,
+                "is_active": customer.is_active,
+                "created_at": customer.created_at,
+                "updated_at": customer.updated_at,
+                "total_orders": int(row[1] or 0),
+                "total_spent": Decimal(str(row[2] or 0)),
+            })
+        return customers
+
+    def count_all(self) -> int:
+        return self.db.query(func.count(Customer.id)).scalar() or 0
+
     def get_with_statistics(self, customer_id: UUID) -> Optional[dict]:
         """Mijoz statistikasi bilan"""
         customer = self.get_by_id(customer_id)
