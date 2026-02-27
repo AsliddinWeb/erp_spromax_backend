@@ -14,6 +14,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     postgresql-client \
     libpq-dev \
+    tzdata \
+    && ln -sf /usr/share/zoneinfo/Asia/Tashkent /etc/localtime \
+    && echo "Asia/Tashkent" > /etc/timezone \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching

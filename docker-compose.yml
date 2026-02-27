@@ -67,6 +67,7 @@ services:
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
       - DEFAULT_PAGE_SIZE=${DEFAULT_PAGE_SIZE:-20}
       - MAX_PAGE_SIZE=${MAX_PAGE_SIZE:-100}
+      - TZ=Asia/Tashkent
     networks:
       - promax_network
 
