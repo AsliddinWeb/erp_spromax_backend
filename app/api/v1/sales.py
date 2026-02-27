@@ -4,19 +4,9 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 from app.database import get_db
 from app.schemas.sales import (
-    # Customer
-    CustomerCreate,
-    CustomerUpdate,
-    CustomerResponse,
-    CustomerStatistics,
-    # Order
-    OrderCreate,
-    OrderUpdate,
-    OrderResponse,
-    # Payment
-    PaymentCreate,
-    PaymentResponse,
-    # Statistics
+    CustomerCreate, CustomerUpdate, CustomerResponse, CustomerStatistics,
+    OrderCreate, OrderUpdate, OrderResponse,
+    PaymentCreate, PaymentResponse,
     SalesStatistics
 )
 from app.services.sales_service import SalesService
@@ -35,7 +25,6 @@ async def create_customer(
         db: Session = Depends(get_db),
         current_user: User = Depends(require_permission(PermissionType.WRITE_SALES))
 ):
-    """Yangi mijoz qo'shish"""
     service = SalesService(db)
     return service.create_customer(customer_data)
 
@@ -48,7 +37,7 @@ async def get_customers(
         db: Session = Depends(get_db),
         current_user: User = Depends(require_permission(PermissionType.READ_SALES))
 ):
-    """Barcha mijozlar ro'yxati — total_orders va total_spent bilan"""
+    """Barcha mijozlar — total_orders va total_spent bilan"""
     service = SalesService(db)
     actual_skip = (page - 1) * limit if page > 1 else skip
     result = service.get_all_customers(skip=actual_skip, limit=limit)
@@ -61,7 +50,6 @@ async def get_customer(
         db: Session = Depends(get_db),
         current_user: User = Depends(require_permission(PermissionType.READ_SALES))
 ):
-    """Bitta mijoz ma'lumotlari"""
     service = SalesService(db)
     return service.get_customer(customer_id)
 
@@ -73,7 +61,6 @@ async def update_customer(
         db: Session = Depends(get_db),
         current_user: User = Depends(require_permission(PermissionType.WRITE_SALES))
 ):
-    """Mijoz ma'lumotlarini yangilash"""
     service = SalesService(db)
     return service.update_customer(customer_id, customer_data)
 
@@ -84,7 +71,6 @@ async def delete_customer(
         db: Session = Depends(get_db),
         current_user: User = Depends(require_permission(PermissionType.WRITE_SALES))
 ):
-    """Mijozni o'chirish"""
     service = SalesService(db)
     service.delete_customer(customer_id)
     return {"message": "Mijoz o'chirildi"}
@@ -96,7 +82,6 @@ async def get_customer_statistics(
         db: Session = Depends(get_db),
         current_user: User = Depends(require_permission(PermissionType.READ_SALES))
 ):
-    """Mijoz statistikasi"""
     service = SalesService(db)
     return service.get_customer_statistics(customer_id)
 
@@ -109,11 +94,6 @@ async def create_order(
         db: Session = Depends(get_db),
         current_user: User = Depends(require_permission(PermissionType.WRITE_SALES))
 ):
-    """
-    Yangi buyurtma yaratish
-
-    Mijozdan buyurtma qabul qilish va mahsulotlarni rezerv qilish.
-    """
     service = SalesService(db)
     return service.create_order(order_data, current_user.id)
 
@@ -122,16 +102,17 @@ async def create_order(
 async def get_orders(
         skip: int = Query(0, ge=0),
         limit: int = Query(100, ge=1, le=100),
+        page: int = Query(1, ge=1),
         payment_status: Optional[str] = Query(None),
         delivery_status: Optional[str] = Query(None),
         db: Session = Depends(get_db),
         current_user: User = Depends(require_permission(PermissionType.READ_SALES))
 ):
-    """Barcha buyurtmalar ro'yxati"""
+    """Barcha buyurtmalar"""
     service = SalesService(db)
+    actual_skip = (page - 1) * limit if page > 1 else skip
     return service.get_all_orders(
-        skip=skip,
-        limit=limit,
+        skip=actual_skip, limit=limit,
         payment_status=payment_status,
         delivery_status=delivery_status
     )
@@ -143,7 +124,6 @@ async def get_order(
         db: Session = Depends(get_db),
         current_user: User = Depends(require_permission(PermissionType.READ_SALES))
 ):
-    """Bitta buyurtma ma'lumotlari"""
     service = SalesService(db)
     return service.get_order(order_id)
 
@@ -155,11 +135,6 @@ async def update_order(
         db: Session = Depends(get_db),
         current_user: User = Depends(require_permission(PermissionType.WRITE_SALES))
 ):
-    """
-    Buyurtma yangilash
-
-    Delivery status o'zgarishi bilan stock avtomatik yangilanadi.
-    """
     service = SalesService(db)
     return service.update_order(order_id, order_data)
 
@@ -170,7 +145,6 @@ async def delete_order(
         db: Session = Depends(get_db),
         current_user: User = Depends(require_permission(PermissionType.WRITE_SALES))
 ):
-    """Buyurtmani bekor qilish"""
     service = SalesService(db)
     service.delete_order(order_id)
     return {"message": "Buyurtma bekor qilindi"}
@@ -184,12 +158,51 @@ async def get_customer_orders(
         db: Session = Depends(get_db),
         current_user: User = Depends(require_permission(PermissionType.READ_SALES))
 ):
-    """Mijoz buyurtmalari"""
     service = SalesService(db)
     return service.get_customer_orders(customer_id, skip=skip, limit=limit)
 
 
 # ============ PAYMENT ENDPOINTS ============
+
+@router.get("/payments")
+async def get_all_payments(
+        skip: int = Query(0, ge=0),
+        limit: int = Query(100, ge=1, le=100),
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.READ_SALES))
+):
+    """Barcha to'lovlar — mijoz nomi bilan"""
+    from sqlalchemy import desc
+    from app.models.sales import Payment, Order, Customer
+
+    rows = (
+        db.query(Payment, Order, Customer)
+        .join(Order, Payment.order_id == Order.id)
+        .join(Customer, Order.customer_id == Customer.id)
+        .filter(Payment.is_active == True)
+        .order_by(desc(Payment.payment_date))
+        .offset(skip).limit(limit).all()
+    )
+
+    result = []
+    for payment, order, customer in rows:
+        result.append({
+            "id": str(payment.id),
+            "order_id": str(payment.order_id),
+            "amount": float(payment.amount),
+            "payment_date": payment.payment_date,
+            "payment_method": payment.payment_method,
+            "transaction_id": payment.transaction_id,
+            "notes": payment.notes,
+            "received_by": str(payment.received_by),
+            "customer_name": customer.name,
+            "customer_id": str(customer.id),
+            "created_at": payment.created_at,
+        })
+
+    total = db.query(Payment).filter(Payment.is_active == True).count()
+    return {"items": result, "total": total}
+
 
 @router.post("/payments", response_model=PaymentResponse, status_code=status.HTTP_201_CREATED)
 async def create_payment(
@@ -197,11 +210,6 @@ async def create_payment(
         db: Session = Depends(get_db),
         current_user: User = Depends(require_permission(PermissionType.WRITE_SALES))
 ):
-    """
-    To'lov qo'shish
-
-    Mijoz to'lov qilganda buyurtma payment_status avtomatik yangilanadi.
-    """
     service = SalesService(db)
     return service.create_payment(payment_data, current_user.id)
 
@@ -212,7 +220,6 @@ async def get_order_payments(
         db: Session = Depends(get_db),
         current_user: User = Depends(require_permission(PermissionType.READ_SALES))
 ):
-    """Buyurtma to'lovlari tarixi"""
     service = SalesService(db)
     return service.get_order_payments(order_id)
 
@@ -224,6 +231,5 @@ async def get_statistics(
         db: Session = Depends(get_db),
         current_user: User = Depends(require_permission(PermissionType.READ_SALES))
 ):
-    """Sotuv statistikasi"""
     service = SalesService(db)
     return service.get_sales_statistics()
