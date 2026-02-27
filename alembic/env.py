@@ -30,7 +30,12 @@ from app.models.production import (
     DefectReason,
     DefectiveProduct,
     ShiftHandover,
-    FinishedProductStock
+    FinishedProductStock,
+    # Yangilar:
+    ShiftPause,
+    ScrapStock,
+    ScrapStockTransaction,
+    ShiftScrapUsage,
 )
 from app.models.sales import (
     Customer,

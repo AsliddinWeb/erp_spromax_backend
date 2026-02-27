@@ -295,3 +295,92 @@ class ProductionStatistics(BaseSchema):
     total_output_today: Decimal
     total_defects_today: Decimal
     average_efficiency_today: Decimal
+
+# ============ SHIFT PAUSE SCHEMAS ============
+
+class ShiftPauseCreate(BaseSchema):
+    reason: str  # breakdown, lunch, other
+    notes: Optional[str] = None
+
+
+class ShiftPauseResponse(BaseIDSchema):
+    shift_id: UUID
+    paused_at: datetime
+    resumed_at: Optional[datetime] = None
+    reason: str
+    notes: Optional[str] = None
+
+    @property
+    def duration_minutes(self) -> Optional[int]:
+        if self.paused_at and self.resumed_at:
+            return int((self.resumed_at - self.paused_at).total_seconds() / 60)
+        return None
+
+
+# ============ SCRAP STOCK SCHEMAS ============
+
+class ScrapStockResponse(BaseIDSchema):
+    finished_product_id: UUID
+    quantity: Decimal
+    last_updated: datetime
+    finished_product: Optional[FinishedProductResponse] = None
+
+
+class ScrapStockTransactionResponse(BaseIDSchema):
+    finished_product_id: UUID
+    transaction_type: str  # in, out, recycled
+    quantity: Decimal
+    shift_id: Optional[UUID] = None
+    notes: Optional[str] = None
+    recorded_at: datetime
+    finished_product: Optional[FinishedProductResponse] = None
+
+
+class ScrapTransferCreate(BaseSchema):
+    """Atxotni tegirmonga o'tkazish (recycled)"""
+    finished_product_id: UUID
+    quantity: Decimal
+    notes: Optional[str] = None
+
+
+# ============ SHIFT SCRAP USAGE SCHEMAS ============
+
+class ShiftScrapUsageCreate(BaseSchema):
+    finished_product_id: UUID
+    quantity_used: Decimal
+    notes: Optional[str] = None
+
+
+class ShiftScrapUsageResponse(BaseIDSchema):
+    shift_id: UUID
+    finished_product_id: UUID
+    quantity_used: Decimal
+    recorded_at: datetime
+    notes: Optional[str] = None
+    finished_product: Optional[FinishedProductResponse] = None
+
+
+# ============ SHIFT CLOSE SCHEMAS (yangilangan) ============
+
+class ShiftOutputItem(BaseSchema):
+    """Smena yakunida bitta mahsulot chiqimi"""
+    finished_product_id: UUID
+    quantity_produced: Decimal
+    notes: Optional[str] = None
+
+
+class ShiftScrapItem(BaseSchema):
+    """Smena yakunida bitta atxot yozuvi"""
+    finished_product_id: UUID
+    quantity: Decimal
+    defect_reason_id: Optional[UUID] = None
+    notes: Optional[str] = None
+
+
+class ShiftCloseRequest(BaseSchema):
+    """Smena yopish — barcha ma'lumot bir so'rovda"""
+    end_time: datetime
+    outputs: List[ShiftOutputItem] = []    # ishlab chiqarilgan mahsulotlar
+    scraps: List[ShiftScrapItem] = []      # atxot mahsulotlar
+    notes: Optional[str] = None
+    handover_notes: Optional[str] = None
