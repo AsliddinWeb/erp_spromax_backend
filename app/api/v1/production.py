@@ -574,7 +574,7 @@ async def get_scrap_transactions(
     return service.get_scrap_transactions(product_id)
 
 
-@router.post("/scrap-stock/transfer-to-grinder", response_model=ScrapStockTransactionResponse)
+@router.post("/scrap-stock/transfer-to-grinder")
 async def transfer_scrap_to_grinder(
         data: ScrapTransferCreate,
         db: Session = Depends(get_db),
