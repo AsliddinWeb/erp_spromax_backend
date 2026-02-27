@@ -583,78 +583,84 @@ class ProductionService:
             q = q.filter(ScrapStockTransaction.stock_type == stock_type)
         return q.order_by(ScrapStockTransaction.recorded_at.desc()).limit(200).all()
 
-    def transfer_scrap_to_grinder(self, data: ScrapTransferCreate) -> ScrapStockTransaction:
+    def transfer_scrap_to_grinder(self, data: ScrapTransferCreate) -> dict:
         """
-        Brak atxotni tegirmonga o'tkazish.
+        Brak mahsulotni tegirmonga o'tkazish → boshqa mahsulot (granula) chiqadi.
 
         Jarayon:
-        1. brak qoldiqdan kamaytirish
-        2. recycled qoldiqqa qo'shish
-        3. Har ikki tur uchun tranzaksiya yozish
+        1. input_product (brak) qoldiqdan kamaytirish
+        2. output_product (recycled) — BOSHQA mahsulot — qo'shiladi
+        3. Har ikki tranzaksiya yoziladi
+
+        Tizim hisoblamaydi — operator output_quantity ni o'zi kiritadi.
         """
-        # 1. Brak qoldiqni topish
+        # 1. Brak qoldiqni tekshirish (input mahsulot)
         brak_stock = self.db.query(ScrapStock).filter(
-            ScrapStock.finished_product_id == data.finished_product_id,
+            ScrapStock.finished_product_id == data.input_product_id,
             ScrapStock.stock_type == 'brak'
         ).first()
 
         if not brak_stock:
             raise NotFoundException(detail="Brak atxot qoldiq topilmadi")
-        if brak_stock.quantity < data.quantity:
+        if brak_stock.quantity < data.input_quantity:
             raise BadRequestException(
-                detail=f"Yetarli brak yo'q. Mavjud: {brak_stock.quantity}, So'ralgan: {data.quantity}"
+                detail=f"Yetarli brak yo'q. Mavjud: {brak_stock.quantity}, So'ralgan: {data.input_quantity}"
             )
 
-        # 2. Brak kamaytirish
-        brak_stock.quantity -= data.quantity
-        brak_stock.last_updated = datetime.utcnow()
+        now = datetime.utcnow()
 
-        # Brak chiqim tranzaksiyasi
+        # 2. Brak kamaytirish
+        brak_stock.quantity -= data.input_quantity
+        brak_stock.last_updated = now
+
         out_txn = ScrapStockTransaction(
             scrap_stock_id=brak_stock.id,
-            finished_product_id=data.finished_product_id,
+            finished_product_id=data.input_product_id,
             transaction_type='brak_out',
             stock_type='brak',
-            quantity=data.quantity,
+            quantity=data.input_quantity,
             notes=data.notes,
-            recorded_at=datetime.utcnow(),
+            recorded_at=now,
         )
         self.db.add(out_txn)
 
-        # 3. Recycled qoldiqqa qo'shish
+        # 3. Output mahsulotni recycled sifatida atxot skladga qo'shish
+        # (output_product_id != input_product_id bo'lishi mumkin)
         recycled_stock = self.db.query(ScrapStock).filter(
-            ScrapStock.finished_product_id == data.finished_product_id,
+            ScrapStock.finished_product_id == data.output_product_id,
             ScrapStock.stock_type == 'recycled'
         ).first()
 
         if not recycled_stock:
             recycled_stock = ScrapStock(
-                finished_product_id=data.finished_product_id,
+                finished_product_id=data.output_product_id,
                 stock_type='recycled',
-                quantity=data.quantity,
-                last_updated=datetime.utcnow(),
+                quantity=data.output_quantity,
+                last_updated=now,
             )
             self.db.add(recycled_stock)
             self.db.flush()
         else:
-            recycled_stock.quantity += data.quantity
-            recycled_stock.last_updated = datetime.utcnow()
+            recycled_stock.quantity += data.output_quantity
+            recycled_stock.last_updated = now
 
-        # Recycled kirim tranzaksiyasi
         in_txn = ScrapStockTransaction(
             scrap_stock_id=recycled_stock.id,
-            finished_product_id=data.finished_product_id,
+            finished_product_id=data.output_product_id,
             transaction_type='recycled_in',
             stock_type='recycled',
-            quantity=data.quantity,
+            quantity=data.output_quantity,
             notes=data.notes,
-            recorded_at=datetime.utcnow(),
+            recorded_at=now,
         )
         self.db.add(in_txn)
 
         self.db.commit()
         self.db.refresh(in_txn)
-        return in_txn
+        return {
+            "brak_out": {"product_id": str(data.input_product_id), "quantity": float(data.input_quantity)},
+            "recycled_in": {"product_id": str(data.output_product_id), "quantity": float(data.output_quantity)},
+        }
 
     # ============ SHIFT SCRAP USAGE ============
 

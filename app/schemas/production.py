@@ -255,6 +255,7 @@ class ShiftCompleteRequest(BaseSchema):
     complete_data: ShiftComplete
     handover_data: Optional[ShiftHandoverCreate] = None
 
+
 # ============ FINISHED PRODUCT STOCK SCHEMAS ============
 
 class FinishedProductStockResponse(BaseIDSchema):
@@ -296,6 +297,7 @@ class ProductionStatistics(BaseSchema):
     total_defects_today: Decimal
     average_efficiency_today: Decimal
 
+
 # ============ SHIFT PAUSE SCHEMAS ============
 
 class ShiftPauseCreate(BaseSchema):
@@ -330,7 +332,7 @@ class ScrapStockResponse(BaseIDSchema):
 class ScrapStockTransactionResponse(BaseIDSchema):
     finished_product_id: UUID
     transaction_type: str  # brak_in, brak_out, recycled_in, recycled_out
-    stock_type: str         # 'brak' | 'recycled'
+    stock_type: str  # 'brak' | 'recycled'
     quantity: Decimal
     shift_id: Optional[UUID] = None
     notes: Optional[str] = None
@@ -339,9 +341,18 @@ class ScrapStockTransactionResponse(BaseIDSchema):
 
 
 class ScrapTransferCreate(BaseSchema):
-    """Atxotni tegirmonga o'tkazish (recycled)"""
-    finished_product_id: UUID
-    quantity: Decimal
+    """Atxotni tegirmonga o'tkazish.
+
+    Brak mahsulot (masalan PVC quvur) tegirmonga kirib,
+    boshqa mahsulot (masalan PVC granula) chiqadi.
+    Operator chiqadigan miqdorni o'zi yozadi.
+    """
+    # Kirish: brak mahsulot
+    input_product_id: UUID  # PVC quvur (brak)
+    input_quantity: Decimal  # necha kg brak kirdi
+    # Chiqish: granula yoki boshqa mahsulot
+    output_product_id: UUID  # PVC granula (recycled) — boshqa mahsulot bo'lishi mumkin
+    output_quantity: Decimal  # necha kg/litr chiqdi — operator yozadi
     notes: Optional[str] = None
 
 
@@ -383,7 +394,7 @@ class ShiftScrapItem(BaseSchema):
 class ShiftCloseRequest(BaseSchema):
     """Smena yopish — barcha ma'lumot bir so'rovda"""
     end_time: datetime
-    outputs: List[ShiftOutputItem] = []    # ishlab chiqarilgan mahsulotlar
-    scraps: List[ShiftScrapItem] = []      # atxot mahsulotlar
+    outputs: List[ShiftOutputItem] = []  # ishlab chiqarilgan mahsulotlar
+    scraps: List[ShiftScrapItem] = []  # atxot mahsulotlar
     notes: Optional[str] = None
     handover_notes: Optional[str] = None
