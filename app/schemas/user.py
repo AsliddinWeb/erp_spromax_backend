@@ -39,7 +39,7 @@ class UserBase(BaseSchema):
     email: EmailStr
     full_name: str = Field(..., min_length=1, max_length=100)
     phone: Optional[str] = Field(None, max_length=20)
-    
+
     @field_validator('username')
     @classmethod
     def validate_username(cls, v):
@@ -51,7 +51,7 @@ class UserBase(BaseSchema):
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8, max_length=100)
     role_id: UUID
-    
+
     @field_validator('password')
     @classmethod
     def validate_password(cls, v):
@@ -99,10 +99,16 @@ class RefreshTokenRequest(BaseSchema):
     refresh_token: str
 
 
+class UpdateProfileRequest(BaseSchema):
+    full_name: Optional[str] = Field(None, min_length=1, max_length=100)
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = Field(None, max_length=20)
+
+
 class ChangePasswordRequest(BaseSchema):
     old_password: str
     new_password: str = Field(..., min_length=8, max_length=100)
-    
+
     @field_validator('new_password')
     @classmethod
     def validate_new_password(cls, v):
