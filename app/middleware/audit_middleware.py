@@ -22,10 +22,11 @@ def _save_log(method, path, status_code, user_id, username, ip):
                 request_body=None,
                 ip_address=ip,
             )
+            print(f"AUDIT OK: {method} {path} {status_code} user={username}", flush=True)
         finally:
             db.close()
     except Exception as e:
-        print(f"AUDIT LOG ERROR: {type(e).__name__}: {e}", flush=True)
+        print(f"AUDIT ERROR: {type(e).__name__}: {e}", flush=True)
 
 
 class AuditMiddleware:
@@ -59,34 +60,35 @@ class AuditMiddleware:
         except BaseException as e:
             exc_to_raise = e
 
-        # Log saqlash (exception bo'lsa ham, bo'lmasa ham)
-        if should_log and status_code:
-            user_id = None
-            username = None
-            ip = None
-            try:
-                headers = dict(scope.get("headers", []))
-                auth = headers.get(b"authorization", b"").decode("utf-8", errors="ignore")
-                if auth.startswith("Bearer "):
-                    token = auth.split(" ", 1)[1]
-                    payload = decode_token(token)
-                    if payload:
-                        raw_id = payload.get("sub")
-                        try:
-                            user_id = uuid.UUID(str(raw_id)) if raw_id else None
-                        except Exception:
-                            user_id = None
-                        username = payload.get("username")
-                client = scope.get("client")
-                ip = client[0] if client else None
-            except Exception:
-                pass
+        if should_log:
+            print(f"AUDIT CHECK: method={method} path={path} status={status_code} should_log={should_log}", flush=True)
+            if status_code:
+                user_id = None
+                username = None
+                ip = None
+                try:
+                    headers = dict(scope.get("headers", []))
+                    auth = headers.get(b"authorization", b"").decode("utf-8", errors="ignore")
+                    if auth.startswith("Bearer "):
+                        token = auth.split(" ", 1)[1]
+                        payload = decode_token(token)
+                        if payload:
+                            raw_id = payload.get("sub")
+                            try:
+                                user_id = uuid.UUID(str(raw_id)) if raw_id else None
+                            except Exception:
+                                user_id = None
+                            username = payload.get("username")
+                    client = scope.get("client")
+                    ip = client[0] if client else None
+                except Exception:
+                    pass
 
-            threading.Thread(
-                target=_save_log,
-                args=(method, path, status_code, user_id, username, ip),
-                daemon=True,
-            ).start()
+                threading.Thread(
+                    target=_save_log,
+                    args=(method, path, status_code, user_id, username, ip),
+                    daemon=True,
+                ).start()
 
         if exc_to_raise is not None:
             raise exc_to_raise
