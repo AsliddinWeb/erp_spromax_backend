@@ -18,6 +18,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    from sqlalchemy import inspect
+    bind = op.get_bind()
+    if 'audit_logs' in inspect(bind).get_table_names():
+        return
     op.create_table(
         'audit_logs',
         sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True),
