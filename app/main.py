@@ -80,7 +80,7 @@ app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(Exception, unhandled_exception_handler)
 
-# Audit middleware
+# Audit middleware (pure ASGI)
 app.add_middleware(AuditMiddleware)
 
 # CORS middleware

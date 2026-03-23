@@ -1,7 +1,7 @@
 import json
 import uuid
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
+import asyncio
+from starlette.types import ASGIApp, Receive, Scope, Send
 from app.core.security import decode_token
 from app.database import SessionLocal
 from app.services.audit_log_service import AuditLogService
@@ -10,24 +10,63 @@ LOGGED_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 SKIP_PATHS = {"/health", "/", "/docs", "/redoc", "/openapi.json"}
 
 
-class AuditMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        print(f"AUDIT DISPATCH: {request.method} {request.url.path}", flush=True)
-        response = await call_next(request)
+def _save_log(method, path, status_code, user_id, username, ip):
+    try:
+        db = SessionLocal()
+        try:
+            AuditLogService(db).create(
+                method=method,
+                path=path,
+                status_code=str(status_code),
+                user_id=user_id,
+                username=username,
+                request_body=None,
+                ip_address=ip,
+            )
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"AUDIT LOG ERROR: {type(e).__name__}: {e}", flush=True)
 
-        if request.method not in LOGGED_METHODS:
-            return response
 
-        path = request.url.path
-        if any(path.startswith(skip) for skip in SKIP_PATHS):
-            return response
+class AuditMiddleware:
+    def __init__(self, app: ASGIApp):
+        self.app = app
 
+    async def __call__(self, scope: Scope, receive: Receive, send: Send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        method = scope.get("method", "")
+        path = scope.get("path", "")
+
+        should_log = (
+            method in LOGGED_METHODS
+            and not any(path.startswith(s) for s in SKIP_PATHS)
+        )
+
+        status_code = 0
+
+        async def send_wrapper(message):
+            nonlocal status_code
+            if message["type"] == "http.response.start":
+                status_code = message.get("status", 0)
+            await send(message)
+
+        await self.app(scope, receive, send_wrapper if should_log else send)
+
+        if not should_log:
+            return
+
+        # Token dan user ma'lumotlarini olish
         user_id = None
         username = None
         try:
-            auth_header = request.headers.get("Authorization", "")
-            if auth_header.startswith("Bearer "):
-                token = auth_header.split(" ", 1)[1]
+            headers = dict(scope.get("headers", []))
+            auth = headers.get(b"authorization", b"").decode("utf-8", errors="ignore")
+            if auth.startswith("Bearer "):
+                token = auth.split(" ", 1)[1]
                 payload = decode_token(token)
                 if payload:
                     raw_id = payload.get("sub")
@@ -39,37 +78,17 @@ class AuditMiddleware(BaseHTTPMiddleware):
         except Exception:
             pass
 
-        body_text = None
+        # IP manzil
+        ip = None
         try:
-            body_bytes = await request.body()
-            if body_bytes:
-                parsed = json.loads(body_bytes)
-                # Remove sensitive fields
-                parsed.pop("password", None)
-                parsed.pop("old_password", None)
-                parsed.pop("new_password", None)
-                body_text = json.dumps(parsed, ensure_ascii=False)[:2000]
+            client = scope.get("client")
+            ip = client[0] if client else None
         except Exception:
             pass
 
-        ip = request.client.host if request.client else None
-
-        try:
-            db = SessionLocal()
-            try:
-                log = AuditLogService(db).create(
-                    method=request.method,
-                    path=path,
-                    status_code=str(response.status_code),
-                    user_id=user_id,
-                    username=username,
-                    request_body=body_text,
-                    ip_address=ip,
-                )
-                print(f"AUDIT SAVED: {request.method} {path} user={username} id={log.id}", flush=True)
-            finally:
-                db.close()
-        except BaseException as e:
-            print(f"AUDIT LOG ERROR: {type(e).__name__}: {e}", flush=True)
-
-        return response
+        # Background da saqlaymiz
+        asyncio.create_task(
+            asyncio.get_event_loop().run_in_executor(
+                None, _save_log, method, path, status_code, user_id, username, ip
+            )
+        )
