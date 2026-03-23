@@ -1,4 +1,5 @@
 import json
+import uuid
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from app.core.security import decode_token
@@ -28,7 +29,11 @@ class AuditMiddleware(BaseHTTPMiddleware):
                 token = auth_header.split(" ", 1)[1]
                 payload = decode_token(token)
                 if payload:
-                    user_id = payload.get("sub")
+                    raw_id = payload.get("sub")
+                    try:
+                        user_id = uuid.UUID(str(raw_id)) if raw_id else None
+                    except Exception:
+                        user_id = None
                     username = payload.get("username")
         except Exception:
             pass
