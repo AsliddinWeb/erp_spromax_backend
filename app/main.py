@@ -4,6 +4,7 @@ from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
@@ -66,6 +67,9 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
+
+# Nginx orqali HTTPS ishlaganda to'g'ri protocol aniqlash
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 # Rate limiter
 app.state.limiter = limiter

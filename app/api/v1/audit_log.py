@@ -10,7 +10,7 @@ router = APIRouter(prefix="/audit-logs", tags=["Audit Logs"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
-@router.get("/")
+@router.get("")
 def get_audit_logs(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=500),
