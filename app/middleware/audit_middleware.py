@@ -11,6 +11,7 @@ SKIP_PATHS = {"/health", "/", "/docs", "/redoc", "/openapi.json"}
 
 
 def _save_log(method, path, status_code, user_id, username, ip):
+    print(f"_save_log called: {method} {path} status={status_code} user={username}", flush=True)
     try:
         db = SessionLocal()
         try:
@@ -86,6 +87,7 @@ class AuditMiddleware:
         except Exception:
             pass
 
+        print(f"AUDIT THREAD START: {method} {path}", flush=True)
         # Alohida threadda saqlaymiz (response allaqachon yuborilgan)
         t = threading.Thread(
             target=_save_log,
