@@ -67,7 +67,7 @@ class AuditMiddleware(BaseHTTPMiddleware):
                 )
             finally:
                 db.close()
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"AUDIT LOG ERROR: {e}", flush=True)
 
         return response
