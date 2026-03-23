@@ -56,10 +56,16 @@ class AuditMiddleware:
                 status_code = message.get("status", 0)
             await send(message)
 
-        await self.app(scope, receive, send_wrapper if should_log else send)
+        try:
+            await self.app(scope, receive, send_wrapper if should_log else send)
+        except Exception as e:
+            print(f"AUDIT APP ERROR: {type(e).__name__}: {e}", flush=True)
+            raise
 
         if not should_log:
             return
+
+        print(f"AUDIT AFTER APP: {method} {path} status={status_code}", flush=True)
 
         # Token dan user ma'lumotlarini olish
         user_id = None
