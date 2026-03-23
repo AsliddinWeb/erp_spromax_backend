@@ -1,6 +1,6 @@
 import json
 import uuid
-import asyncio
+import threading
 from starlette.types import ASGIApp, Receive, Scope, Send
 from app.core.security import decode_token
 from app.database import SessionLocal
@@ -86,9 +86,10 @@ class AuditMiddleware:
         except Exception:
             pass
 
-        # Background da saqlaymiz
-        asyncio.create_task(
-            asyncio.get_event_loop().run_in_executor(
-                None, _save_log, method, path, status_code, user_id, username, ip
-            )
+        # Alohida threadda saqlaymiz (response allaqachon yuborilgan)
+        t = threading.Thread(
+            target=_save_log,
+            args=(method, path, status_code, user_id, username, ip),
+            daemon=True,
         )
+        t.start()
