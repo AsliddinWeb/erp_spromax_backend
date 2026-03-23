@@ -30,6 +30,9 @@ class Settings(BaseSettings):
 
     # Timezone
     TIMEZONE: str = "Asia/Tashkent"
+
+    # Sentry (optional — bo'sh qoldirilsa, o'chiriladi)
+    SENTRY_DSN: str = ""
     
     @property
     def allowed_origins_list(self) -> List[str]:

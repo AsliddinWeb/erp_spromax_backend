@@ -166,6 +166,13 @@ class MaintenanceService:
         """So'rov loglari"""
         return self.log_repo.get_by_request(request_id)
 
+    def delete_log(self, log_id: UUID) -> bool:
+        """Jurnal yozuvini o'chirish"""
+        log = self.log_repo.get_by_id(log_id)
+        if not log:
+            raise NotFoundException(detail="Jurnal yozuvi topilmadi")
+        return self.log_repo.delete(log_id)
+
     # ============ SPARE PART METHODS ============
 
     def create_spare_part(self, part_data: SparePartCreate) -> SparePart:
@@ -241,6 +248,13 @@ class MaintenanceService:
     def get_request_spare_parts(self, request_id: UUID) -> List[SparePartUsage]:
         """So'rovda ishlatilgan qismlar"""
         return self.usage_repo.get_by_request(request_id)
+
+    def delete_spare_part_usage(self, usage_id: UUID) -> bool:
+        """Ehtiyot qism ishlatish yozuvini o'chirish"""
+        usage = self.usage_repo.get_by_id(usage_id)
+        if not usage:
+            raise NotFoundException(detail="Yozuv topilmadi")
+        return self.usage_repo.delete(usage_id)
 
     # ============ MAINTENANCE SCHEDULE METHODS ============
 

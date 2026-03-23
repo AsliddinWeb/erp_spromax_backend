@@ -27,7 +27,7 @@ from app.schemas.warehouse import (
     WarehouseStatistics
 )
 from app.services.warehouse_service import WarehouseService
-from app.dependencies import get_current_user, require_permission
+from app.dependencies import get_current_user, require_permission, require_admin
 from app.models.user import User
 from app.core.constants import PermissionType
 
@@ -90,7 +90,7 @@ async def update_supplier(
 async def delete_supplier(
         supplier_id: UUID,
         db: Session = Depends(get_db),
-        current_user: User = Depends(require_permission(PermissionType.WRITE_WAREHOUSE))
+        current_user: User = Depends(require_admin)
 ):
     """Yetkazib beruvchini o'chirish"""
     service = WarehouseService(db)
@@ -157,7 +157,7 @@ async def update_raw_material(
 async def delete_raw_material(
         material_id: UUID,
         db: Session = Depends(get_db),
-        current_user: User = Depends(require_permission(PermissionType.WRITE_WAREHOUSE))
+        current_user: User = Depends(require_admin)
 ):
     """Xom-ashyoni o'chirish"""
     service = WarehouseService(db)
@@ -203,6 +203,18 @@ async def get_receipt(
     """Bitta qabul qilish ma'lumotlari"""
     service = WarehouseService(db)
     return service.get_receipt(receipt_id)
+
+
+@router.delete("/receipts/{receipt_id}", status_code=status.HTTP_200_OK)
+async def delete_receipt(
+        receipt_id: UUID,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_admin)
+):
+    """Qabul qilishni o'chirish (faqat admin)"""
+    service = WarehouseService(db)
+    service.delete_receipt(receipt_id)
+    return {"message": "Qabul qilish o'chirildi"}
 
 
 # ============ STOCK ENDPOINTS ============
@@ -291,6 +303,18 @@ async def get_material_request(
     """Bitta so'rov ma'lumotlari"""
     service = WarehouseService(db)
     return service.get_material_request(request_id)
+
+
+@router.delete("/requests/{request_id}", status_code=status.HTTP_200_OK)
+async def delete_material_request(
+        request_id: UUID,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_admin)
+):
+    """Material so'rovini o'chirish (faqat admin)"""
+    service = WarehouseService(db)
+    service.delete_material_request(request_id)
+    return {"message": "So'rov o'chirildi"}
 
 
 @router.put("/requests/{request_id}/approve", response_model=MaterialRequestResponse)

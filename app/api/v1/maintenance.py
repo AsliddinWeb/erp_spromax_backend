@@ -26,7 +26,7 @@ from app.schemas.maintenance import (
     MaintenanceStatistics
 )
 from app.services.maintenance_service import MaintenanceService
-from app.dependencies import get_current_user, require_permission
+from app.dependencies import get_current_user, require_permission, require_admin
 from app.models.user import User
 from app.core.constants import PermissionType
 
@@ -106,7 +106,7 @@ async def update_request(
 async def delete_request(
     request_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_admin)
 ):
     """So'rov o'chirish"""
     service = MaintenanceService(db)
@@ -129,6 +129,18 @@ async def create_log(
     """
     service = MaintenanceService(db)
     return service.create_log(log_data, current_user.id)
+
+
+@router.delete("/logs/{log_id}", status_code=status.HTTP_200_OK)
+async def delete_log(
+    log_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Ish jurnal yozuvini o'chirish (faqat admin)"""
+    service = MaintenanceService(db)
+    service.delete_log(log_id)
+    return {"message": "Jurnal yozuvi o'chirildi"}
 
 
 @router.get("/requests/{request_id}/logs", response_model=List[MaintenanceLogResponse])
@@ -217,7 +229,7 @@ async def update_spare_part(
 async def delete_spare_part(
     part_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.WRITE_MAINTENANCE))
+    current_user: User = Depends(require_admin)
 ):
     """Ehtiyot qism o'chirish"""
     service = MaintenanceService(db)
@@ -240,6 +252,18 @@ async def create_spare_part_usage(
     """
     service = MaintenanceService(db)
     return service.create_spare_part_usage(usage_data)
+
+
+@router.delete("/spare-part-usage/{usage_id}", status_code=status.HTTP_200_OK)
+async def delete_spare_part_usage(
+    usage_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Ehtiyot qism ishlatish yozuvini o'chirish (faqat admin)"""
+    service = MaintenanceService(db)
+    service.delete_spare_part_usage(usage_id)
+    return {"message": "Yozuv o'chirildi"}
 
 
 @router.get("/requests/{request_id}/spare-parts", response_model=List[SparePartUsageResponse])
@@ -320,7 +344,7 @@ async def update_schedule(
 async def delete_schedule(
     schedule_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(PermissionType.WRITE_MAINTENANCE))
+    current_user: User = Depends(require_admin)
 ):
     """Jadval o'chirish"""
     service = MaintenanceService(db)

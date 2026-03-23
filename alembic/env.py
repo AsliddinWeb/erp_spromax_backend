@@ -64,6 +64,7 @@ from app.models.maintenance import (
 
 from app.models.notification import Notification
 from app.models.system_settings import SystemSettings
+from app.models.audit_log import AuditLog
 
 # this is the Alembic Config object
 config = context.config

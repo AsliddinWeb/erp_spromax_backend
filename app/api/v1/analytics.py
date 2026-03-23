@@ -1,5 +1,6 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, Query
+from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 from datetime import date, datetime, timedelta
 from app.database import get_db
@@ -17,6 +18,7 @@ from app.services.analytics_service import AnalyticsService
 from app.dependencies import get_current_user, require_permission
 from app.models.user import User
 from app.core.constants import PermissionType
+from app.core.cache import cache_get, cache_set
 
 router = APIRouter(prefix="/analytics", tags=["Analytics & Reporting"])
 
@@ -29,12 +31,19 @@ async def get_dashboard(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Asosiy dashboard ma'lumotlari
-    
+    Asosiy dashboard ma'lumotlari (5 daqiqa cache)
+
     Barcha modullardan umumiy ko'rsatkichlar.
     """
+    cache_key = f"analytics:dashboard:{date.today()}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     service = AnalyticsService(db)
-    return service.get_dashboard_overview()
+    result = service.get_dashboard_overview()
+    cache_set(cache_key, jsonable_encoder(result), ttl=300)
+    return result
 
 
 # ============ MODULE ANALYTICS ENDPOINTS ============
@@ -139,12 +148,19 @@ async def get_kpi_metrics(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Asosiy KPI ko'rsatkichlari
-    
+    Asosiy KPI ko'rsatkichlari (10 daqiqa cache)
+
     Kompaniyaning barcha asosiy ko'rsatkichlari (KPI - Key Performance Indicators).
     """
+    cache_key = f"analytics:kpi:{date.today()}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     service = AnalyticsService(db)
-    return service.get_kpi_metrics()
+    result = service.get_kpi_metrics()
+    cache_set(cache_key, jsonable_encoder(result), ttl=600)
+    return result
 
 
 # ============ QUICK STATS ENDPOINTS ============

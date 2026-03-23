@@ -75,6 +75,83 @@ services:
       - MAX_PAGE_SIZE=${MAX_PAGE_SIZE:-100}
       - TIMEZONE=${TIMEZONE:-Asia/Tashkent}
       - TZ=Asia/Tashkent
+      - SENTRY_DSN=${SENTRY_DSN:-}
+    networks:
+      - promax_network
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: promax_celery
+    restart: unless-stopped
+    command: celery -A app.tasks.celery_app.celery_app worker --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-promax_user}:${POSTGRES_PASSWORD:-promax_pass}@db:5432/${POSTGRES_DB:-promax_erp}
+      - REDIS_URL=redis://redis:${REDIS_PORT:-6379}/0
+      - SECRET_KEY=${SECRET_KEY}
+      - TIMEZONE=${TIMEZONE:-Asia/Tashkent}
+      - TZ=Asia/Tashkent
+    networks:
+      - promax_network
+
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: promax_celery_beat
+    restart: unless-stopped
+    command: celery -A app.tasks.celery_app.celery_app beat --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      - celery_worker
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-promax_user}:${POSTGRES_PASSWORD:-promax_pass}@db:5432/${POSTGRES_DB:-promax_erp}
+      - REDIS_URL=redis://redis:${REDIS_PORT:-6379}/0
+      - SECRET_KEY=${SECRET_KEY}
+      - TIMEZONE=${TIMEZONE:-Asia/Tashkent}
+      - TZ=Asia/Tashkent
+    networks:
+      - promax_network
+
+  db_backup:
+    image: postgres:15-alpine
+    container_name: promax_db_backup
+    restart: unless-stopped
+    entrypoint: >
+      sh -c "
+        echo 'DB Backup service started';
+        while true; do
+          HOUR=$(date +%H);
+          MINUTE=$(date +%M);
+          if [ \"$$HOUR\" = \"02\" ] && [ \"$$MINUTE\" = \"00\" ]; then
+            FILENAME=\"/backups/promax_erp_$(date +%Y%m%d_%H%M%S).sql.gz\";
+            echo \"Backup boshlandi: $$FILENAME\";
+            pg_dump -h db -U ${POSTGRES_USER:-promax_user} ${POSTGRES_DB:-promax_erp} | gzip > $$FILENAME;
+            echo \"Backup tugadi: $$FILENAME\";
+            find /backups -name '*.sql.gz' -mtime +7 -delete;
+            echo \"7 kundan eski backuplar o'chirildi\";
+            sleep 60;
+          else
+            sleep 30;
+          fi;
+        done
+      "
+    volumes:
+      - db_backups:/backups
+    environment:
+      - PGPASSWORD=${POSTGRES_PASSWORD:-promax_pass}
+    depends_on:
+      db:
+        condition: service_healthy
     networks:
       - promax_network
 
@@ -82,6 +159,8 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  db_backups:
     driver: local
 
 networks:

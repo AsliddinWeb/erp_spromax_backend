@@ -211,6 +211,13 @@ class WarehouseService:
         """Barcha qabul qilishlar"""
         return self.receipt_repo.get_all_with_relations(skip=skip, limit=limit)
 
+    def delete_receipt(self, receipt_id: UUID) -> bool:
+        """Qabul qilishni o'chirish"""
+        receipt = self.receipt_repo.get_by_id(receipt_id)
+        if not receipt:
+            raise NotFoundException(detail="Qabul qilish topilmadi")
+        return self.receipt_repo.delete(receipt_id)
+
     # ============ STOCK METHODS ============
 
     def get_stock_by_material(self, material_id: UUID) -> Optional[WarehouseStock]:
@@ -336,6 +343,13 @@ class WarehouseService:
         self.db.refresh(request)
 
         return request
+
+    def delete_material_request(self, request_id: UUID) -> bool:
+        """Material so'rovini o'chirish"""
+        request = self.request_repo.get_by_id(request_id)
+        if not request:
+            raise NotFoundException(detail="So'rov topilmadi")
+        return self.request_repo.delete(request_id)
 
     def get_my_requests(
             self,

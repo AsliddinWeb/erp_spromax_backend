@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from app.database import get_db
+from app.core.rate_limit import limiter
 from app.schemas.user import (
     LoginRequest,
     TokenResponse,
@@ -19,7 +20,9 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
 @router.post("/login", response_model=TokenResponse, status_code=status.HTTP_200_OK)
+@limiter.limit("5/minute")
 async def login(
+        request: Request,
         login_data: LoginRequest,
         db: Session = Depends(get_db)
 ):

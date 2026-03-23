@@ -54,7 +54,7 @@ from app.schemas.production import (
     ShiftCloseRequest,
 )
 from app.services.production_service import ProductionService
-from app.dependencies import get_current_user, require_permission
+from app.dependencies import get_current_user, require_permission, require_admin
 from app.models.user import User
 from app.core.constants import PermissionType
 
@@ -116,7 +116,7 @@ async def update_production_line(
 async def delete_production_line(
         line_id: UUID,
         db: Session = Depends(get_db),
-        current_user: User = Depends(require_permission(PermissionType.WRITE_PRODUCTION))
+        current_user: User = Depends(require_admin)
 ):
     """Liniya o'chirish"""
     service = ProductionService(db)
@@ -188,7 +188,7 @@ async def update_machine(
 async def delete_machine(
         machine_id: UUID,
         db: Session = Depends(get_db),
-        current_user: User = Depends(require_permission(PermissionType.WRITE_PRODUCTION))
+        current_user: User = Depends(require_admin)
 ):
     """Mashina o'chirish"""
     service = ProductionService(db)
@@ -255,7 +255,7 @@ async def update_finished_product(
 async def delete_finished_product(
         product_id: UUID,
         db: Session = Depends(get_db),
-        current_user: User = Depends(require_permission(PermissionType.WRITE_PRODUCTION))
+        current_user: User = Depends(require_admin)
 ):
     """Tayyor mahsulot o'chirish"""
     service = ProductionService(db)
@@ -315,6 +315,18 @@ async def get_shift(
     return service.get_shift(shift_id)
 
 
+@router.delete("/shifts/{shift_id}", status_code=status.HTTP_200_OK)
+async def delete_shift(
+        shift_id: UUID,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_admin)
+):
+    """Smenani o'chirish (faqat admin)"""
+    service = ProductionService(db)
+    service.delete_shift(shift_id)
+    return {"message": "Smena o'chirildi"}
+
+
 @router.put("/shifts/{shift_id}/complete", response_model=ShiftResponse)
 async def complete_shift(
         shift_id: UUID,
@@ -332,6 +344,19 @@ async def complete_shift(
 
 
 # ============ PRODUCTION RECORD ENDPOINTS ============
+
+@router.delete("/shifts/{shift_id}/records/materials/{record_id}", status_code=status.HTTP_200_OK)
+async def delete_production_record(
+        shift_id: UUID,
+        record_id: UUID,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_admin)
+):
+    """Xom-ashyo yozuvini o'chirish (faqat admin)"""
+    service = ProductionService(db)
+    service.delete_production_record(record_id)
+    return {"message": "Yozuv o'chirildi"}
+
 
 @router.post("/shifts/{shift_id}/records/materials", response_model=ProductionRecordResponse,
              status_code=status.HTTP_201_CREATED)
@@ -362,6 +387,19 @@ async def get_shift_material_usage(
 
 
 # ============ PRODUCTION OUTPUT ENDPOINTS ============
+
+@router.delete("/shifts/{shift_id}/records/output/{output_id}", status_code=status.HTTP_200_OK)
+async def delete_production_output(
+        shift_id: UUID,
+        output_id: UUID,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_admin)
+):
+    """Ishlab chiqarish yozuvini o'chirish (faqat admin)"""
+    service = ProductionService(db)
+    service.delete_production_output(output_id)
+    return {"message": "Yozuv o'chirildi"}
+
 
 @router.post("/shifts/{shift_id}/records/output", response_model=ProductionOutputResponse,
              status_code=status.HTTP_201_CREATED)
@@ -404,6 +442,18 @@ async def create_defect_reason(
     return service.create_defect_reason(reason_data)
 
 
+@router.delete("/defect-reasons/{reason_id}", status_code=status.HTTP_200_OK)
+async def delete_defect_reason(
+        reason_id: UUID,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_admin)
+):
+    """Brak sababini o'chirish (faqat admin)"""
+    service = ProductionService(db)
+    service.delete_defect_reason(reason_id)
+    return {"message": "Brak sababi o'chirildi"}
+
+
 @router.get("/defect-reasons", response_model=List[DefectReasonResponse])
 async def get_defect_reasons(
         skip: int = Query(0, ge=0),
@@ -431,6 +481,19 @@ async def record_defective_product(
     """
     service = ProductionService(db)
     return service.record_defective_product(shift_id, defect_data)
+
+
+@router.delete("/shifts/{shift_id}/records/defects/{defect_id}", status_code=status.HTTP_200_OK)
+async def delete_defective_product(
+        shift_id: UUID,
+        defect_id: UUID,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_admin)
+):
+    """Brak yozuvini o'chirish (faqat admin)"""
+    service = ProductionService(db)
+    service.delete_defective_product(defect_id)
+    return {"message": "Brak yozuvi o'chirildi"}
 
 
 @router.get("/shifts/{shift_id}/records/defects", response_model=List[DefectiveProductResponse])

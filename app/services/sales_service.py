@@ -322,6 +322,13 @@ class SalesService:
         """Buyurtma to'lovlari"""
         return self.payment_repo.get_by_order(order_id)
 
+    def delete_payment(self, payment_id: UUID) -> bool:
+        """To'lovni o'chirish"""
+        payment = self.payment_repo.get_by_id(payment_id)
+        if not payment:
+            raise NotFoundException(detail="To'lov topilmadi")
+        return self.payment_repo.delete(payment_id)
+
     # ============ STATISTICS METHODS ============
 
     def get_sales_statistics(self) -> SalesStatistics:

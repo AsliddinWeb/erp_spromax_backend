@@ -413,6 +413,13 @@ class HRService:
             SalaryPayment.payment_date.desc()
         ).offset(skip).limit(limit).all()
 
+    def delete_salary_payment(self, payment_id: UUID) -> bool:
+        """Ish haqi to'lovini o'chirish"""
+        payment = self.salary_repo.get_by_id(payment_id)
+        if not payment:
+            raise NotFoundException(detail="To'lov topilmadi")
+        return self.salary_repo.delete(payment_id)
+
     # ============ LEAVE REQUEST METHODS ============
 
     def create_leave_request(self, leave_data: LeaveRequestCreate) -> LeaveRequest:
@@ -478,6 +485,13 @@ class HRService:
     ) -> List[LeaveRequest]:
         """Xodim so'rovlari"""
         return self.leave_repo.get_by_employee(employee_id, skip=skip, limit=limit)
+
+    def delete_leave_request(self, request_id: UUID) -> bool:
+        """Ta'til so'rovini o'chirish"""
+        request = self.leave_repo.get_by_id(request_id)
+        if not request:
+            raise NotFoundException(detail="So'rov topilmadi")
+        return self.leave_repo.delete(request_id)
 
     def approve_leave_request(
             self,

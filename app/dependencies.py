@@ -44,6 +44,20 @@ def require_permission(permission: PermissionType):
     return permission_checker
 
 
+async def require_admin(
+        current_user: User = Depends(get_current_user)
+) -> User:
+    """
+    Faqat superadmin va admin uchun (delete operatsiyalari)
+    """
+    if current_user.role.name.lower() not in ("superadmin", "admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Faqat superadmin va admin o'chirish huquqiga ega"
+        )
+    return current_user
+
+
 def require_role(role: UserRole):
     """
     Role talab qilish (decorator)

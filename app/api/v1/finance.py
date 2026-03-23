@@ -20,7 +20,7 @@ from app.schemas.finance import (
     FinanceStatistics
 )
 from app.services.finance_service import FinanceService
-from app.dependencies import get_current_user, require_permission
+from app.dependencies import get_current_user, require_permission, require_admin
 from app.models.user import User
 from app.core.constants import PermissionType
 
@@ -84,7 +84,7 @@ async def update_category(
 async def delete_category(
         category_id: UUID,
         db: Session = Depends(get_db),
-        current_user: User = Depends(require_permission(PermissionType.WRITE_FINANCE))
+        current_user: User = Depends(require_admin)
 ):
     """Kategoriya o'chirish"""
     service = FinanceService(db)
@@ -165,7 +165,7 @@ async def update_transaction(
 async def delete_transaction(
         transaction_id: UUID,
         db: Session = Depends(get_db),
-        current_user: User = Depends(require_permission(PermissionType.WRITE_FINANCE))
+        current_user: User = Depends(require_admin)
 ):
     """Tranzaksiya o'chirish"""
     service = FinanceService(db)

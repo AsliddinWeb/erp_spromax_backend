@@ -10,7 +10,7 @@ from app.schemas.sales import (
     SalesStatistics
 )
 from app.services.sales_service import SalesService
-from app.dependencies import get_current_user, require_permission
+from app.dependencies import get_current_user, require_permission, require_admin
 from app.models.user import User
 from app.core.constants import PermissionType
 
@@ -69,7 +69,7 @@ async def update_customer(
 async def delete_customer(
         customer_id: UUID,
         db: Session = Depends(get_db),
-        current_user: User = Depends(require_permission(PermissionType.WRITE_SALES))
+        current_user: User = Depends(require_admin)
 ):
     service = SalesService(db)
     service.delete_customer(customer_id)
@@ -143,7 +143,7 @@ async def update_order(
 async def delete_order(
         order_id: UUID,
         db: Session = Depends(get_db),
-        current_user: User = Depends(require_permission(PermissionType.WRITE_SALES))
+        current_user: User = Depends(require_admin)
 ):
     service = SalesService(db)
     service.delete_order(order_id)
@@ -212,6 +212,18 @@ async def create_payment(
 ):
     service = SalesService(db)
     return service.create_payment(payment_data, current_user.id)
+
+
+@router.delete("/payments/{payment_id}", status_code=status.HTTP_200_OK)
+async def delete_payment(
+        payment_id: UUID,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_admin)
+):
+    """To'lovni o'chirish (faqat admin)"""
+    service = SalesService(db)
+    service.delete_payment(payment_id)
+    return {"message": "To'lov o'chirildi"}
 
 
 @router.get("/orders/{order_id}/payments", response_model=List[PaymentResponse])

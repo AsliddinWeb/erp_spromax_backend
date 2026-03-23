@@ -1,11 +1,39 @@
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from app.config import settings
 from app.api.v1 import auth, users, warehouse, production, sales, finance, hr, maintenance, analytics, notifications
-from app.api.v1 import system_settings
+from app.api.v1 import system_settings, audit_log, export
+from app.core.rate_limit import limiter
+from app.core.exception_handlers import (
+    http_exception_handler,
+    validation_exception_handler,
+    unhandled_exception_handler,
+)
+from app.middleware.audit_middleware import AuditMiddleware
 from app.utils.datetime_utils import set_timezone
+
+# Sentry — faqat SENTRY_DSN .env da bo'lsa ishga tushadi
+if settings.SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        integrations=[
+            FastApiIntegration(),
+            SqlalchemyIntegration(),
+        ],
+        traces_sample_rate=0.2,   # 20% so'rovlarni performance trace
+        send_default_pii=False,   # foydalanuvchi ma'lumotlarini yubormaslik
+        environment="production" if not settings.DEBUG else "development",
+    )
 
 
 @asynccontextmanager
@@ -39,6 +67,18 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Rate limiter
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Global exception handlers
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(Exception, unhandled_exception_handler)
+
+# Audit middleware
+app.add_middleware(AuditMiddleware)
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -60,6 +100,8 @@ app.include_router(maintenance.router, prefix=settings.API_V1_PREFIX)
 app.include_router(analytics.router, prefix=settings.API_V1_PREFIX)
 app.include_router(notifications.router, prefix=settings.API_V1_PREFIX)
 app.include_router(system_settings.router, prefix=settings.API_V1_PREFIX)
+app.include_router(audit_log.router, prefix=settings.API_V1_PREFIX)
+app.include_router(export.router, prefix=settings.API_V1_PREFIX)
 
 
 def custom_openapi():

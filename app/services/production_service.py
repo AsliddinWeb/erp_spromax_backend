@@ -285,6 +285,13 @@ class ProductionService:
         """Mening smenalarim"""
         return self.shift_repo.get_by_operator(operator_id, skip=skip, limit=limit)
 
+    def delete_shift(self, shift_id: UUID) -> bool:
+        """Smenani o'chirish"""
+        shift = self.shift_repo.get_by_id(shift_id)
+        if not shift:
+            raise NotFoundException(detail="Smena topilmadi")
+        return self.shift_repo.delete(shift_id)
+
     def complete_shift(
             self,
             shift_id: UUID,
@@ -361,6 +368,13 @@ class ProductionService:
         """Smena xom-ashyo ishlatish tarixi"""
         return self.record_repo.get_by_shift(shift_id)
 
+    def delete_production_record(self, record_id: UUID) -> bool:
+        """Xom-ashyo yozuvini o'chirish"""
+        record = self.record_repo.get_by_id(record_id)
+        if not record:
+            raise NotFoundException(detail="Yozuv topilmadi")
+        return self.record_repo.delete(record_id)
+
     # ============ PRODUCTION OUTPUT METHODS ============
 
     def record_production_output(
@@ -396,6 +410,13 @@ class ProductionService:
         """Smena ishlab chiqarish tarixi"""
         return self.output_repo.get_by_shift(shift_id)
 
+    def delete_production_output(self, output_id: UUID) -> bool:
+        """Ishlab chiqarish yozuvini o'chirish"""
+        output = self.output_repo.get_by_id(output_id)
+        if not output:
+            raise NotFoundException(detail="Yozuv topilmadi")
+        return self.output_repo.delete(output_id)
+
     # ============ DEFECT METHODS ============
 
     def create_defect_reason(self, reason_data: DefectReasonCreate) -> DefectReason:
@@ -410,6 +431,13 @@ class ProductionService:
     def get_all_defect_reasons(self, skip: int = 0, limit: int = 100) -> List[DefectReason]:
         """Barcha brak sabablari"""
         return self.defect_reason_repo.get_all(skip=skip, limit=limit)
+
+    def delete_defect_reason(self, reason_id: UUID) -> bool:
+        """Brak sababini o'chirish"""
+        reason = self.defect_reason_repo.get_by_id(reason_id)
+        if not reason:
+            raise NotFoundException(detail="Brak sababi topilmadi")
+        return self.defect_reason_repo.delete(reason_id)
 
     def record_defective_product(
             self,
@@ -439,6 +467,13 @@ class ProductionService:
         )
 
         return self.defective_repo.create(new_defect)
+
+    def delete_defective_product(self, defect_id: UUID) -> bool:
+        """Brak yozuvini o'chirish"""
+        defect = self.defective_repo.get_by_id(defect_id)
+        if not defect:
+            raise NotFoundException(detail="Brak yozuvi topilmadi")
+        return self.defective_repo.delete(defect_id)
 
     def get_shift_defects(self, shift_id: UUID) -> List[DefectiveProduct]:
         """Smena braklari"""

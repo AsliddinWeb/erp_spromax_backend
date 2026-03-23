@@ -31,7 +31,7 @@ from app.schemas.hr import (
     HRStatistics
 )
 from app.services.hr_service import HRService
-from app.dependencies import get_current_user, require_permission
+from app.dependencies import get_current_user, require_permission, require_admin
 from app.models.user import User
 from app.core.constants import PermissionType
 
@@ -90,7 +90,7 @@ async def update_department(
 async def delete_department(
         department_id: UUID,
         db: Session = Depends(get_db),
-        current_user: User = Depends(require_permission(PermissionType.WRITE_HR))
+        current_user: User = Depends(require_admin)
 ):
     """Bo'lim o'chirish"""
     service = HRService(db)
@@ -161,7 +161,7 @@ async def update_employee(
 async def delete_employee(
         employee_id: UUID,
         db: Session = Depends(get_db),
-        current_user: User = Depends(require_permission(PermissionType.WRITE_HR))
+        current_user: User = Depends(require_admin)
 ):
     """Xodimni o'chirish"""
     service = HRService(db)
@@ -238,7 +238,7 @@ async def update_attendance(
 async def delete_attendance(
         attendance_id: UUID,
         db: Session = Depends(get_db),
-        current_user: User = Depends(require_permission(PermissionType.WRITE_HR))
+        current_user: User = Depends(require_admin)
 ):
     """Davomat o'chirish"""
     service = HRService(db)
@@ -318,6 +318,18 @@ async def get_salary_payment(
     return service.get_salary_payment(payment_id)
 
 
+@router.delete("/salary-payments/{payment_id}", status_code=status.HTTP_200_OK)
+async def delete_salary_payment(
+        payment_id: UUID,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_admin)
+):
+    """Ish haqi to'lovini o'chirish (faqat admin)"""
+    service = HRService(db)
+    service.delete_salary_payment(payment_id)
+    return {"message": "To'lov o'chirildi"}
+
+
 @router.get("/employees/{employee_id}/salary-payments", response_model=List[SalaryPaymentResponse])
 async def get_employee_salary_payments(
         employee_id: UUID,
@@ -387,6 +399,18 @@ async def get_employee_leave_requests(
     """Xodim ta'til so'rovlari"""
     service = HRService(db)
     return service.get_employee_leave_requests(employee_id, skip=skip, limit=limit)
+
+
+@router.delete("/leave-requests/{request_id}", status_code=status.HTTP_200_OK)
+async def delete_leave_request(
+        request_id: UUID,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_admin)
+):
+    """Ta'til so'rovini o'chirish (faqat admin)"""
+    service = HRService(db)
+    service.delete_leave_request(request_id)
+    return {"message": "So'rov o'chirildi"}
 
 
 @router.put("/leave-requests/{request_id}/approve", response_model=LeaveRequestResponse)
