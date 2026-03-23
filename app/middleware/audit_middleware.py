@@ -41,6 +41,7 @@ class AuditMiddleware:
 
         method = scope.get("method", "")
         path = scope.get("path", "")
+        print(f"NEW_AUDIT __call__: {method} {path}", flush=True)
 
         should_log = (
             method in LOGGED_METHODS
