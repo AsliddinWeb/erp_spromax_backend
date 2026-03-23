@@ -1,5 +1,5 @@
 from typing import Optional
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 from uuid import UUID
 from app.database import get_db
@@ -7,6 +7,8 @@ from app.schemas.notification import NotificationListResponse, NotificationRespo
 from app.services.notification_service import NotificationService
 from app.dependencies import get_current_user
 from app.models.user import User
+from app.core.security import decode_token
+from app.core.ws_manager import manager
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
@@ -63,3 +65,29 @@ async def mark_all_read(
     service = NotificationService(db)
     service.mark_all_read(current_user.id)
     return {"count": 0}
+
+
+@router.websocket("/ws")
+async def notification_websocket(
+    websocket: WebSocket,
+    token: str = Query(...)
+):
+    """Real-time bildirishnomalar uchun WebSocket"""
+    payload = decode_token(token)
+    if not payload:
+        await websocket.close(code=4001)
+        return
+
+    user_id = payload.get("sub")
+    if not user_id:
+        await websocket.close(code=4001)
+        return
+
+    await manager.connect(websocket, str(user_id))
+    try:
+        while True:
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, str(user_id))

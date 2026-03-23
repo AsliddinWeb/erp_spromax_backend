@@ -5,6 +5,7 @@ from uuid import UUID
 from app.models.notification import Notification
 from app.models.user import User, Role
 from app.core.constants import UserRole
+from app.core.ws_manager import manager
 
 
 class NotificationService:
@@ -41,6 +42,18 @@ class NotificationService:
         self.db.flush()
         return notif
 
+    def _notif_to_dict(self, notif: Notification) -> dict:
+        return {
+            "id": str(notif.id),
+            "title": notif.title,
+            "message": notif.message,
+            "type": notif.type,
+            "is_read": False,
+            "reference_type": notif.reference_type,
+            "reference_id": str(notif.reference_id) if notif.reference_id else None,
+            "created_at": notif.created_at.isoformat() if notif.created_at else None,
+        }
+
     def notify_roles(
         self,
         roles: List[str],
@@ -52,8 +65,9 @@ class NotificationService:
     ):
         """Berilgan rollardagi barcha foydalanuvchilarga bildirishnoma yuborish"""
         users = self._get_users_by_roles(roles)
+        created = []
         for user in users:
-            self.create_notification(
+            notif = self.create_notification(
                 user_id=user.id,
                 title=title,
                 message=message,
@@ -61,7 +75,10 @@ class NotificationService:
                 reference_type=reference_type,
                 reference_id=reference_id
             )
+            created.append((str(user.id), notif))
         self.db.commit()
+        for user_id, notif in created:
+            manager.push_to_user(user_id, self._notif_to_dict(notif))
 
     # ============ TRIGGER METODLARI ============
 
@@ -112,7 +129,7 @@ class NotificationService:
     def notify_salary_payment(self, employee_name: str, amount: float, employee_user_id: Optional[UUID], payment_id: UUID):
         """Ish haqi to'lovi bildirishnomasi — xodimning o'ziga"""
         if employee_user_id:
-            self.create_notification(
+            notif = self.create_notification(
                 user_id=employee_user_id,
                 title="💰 Ish haqi to'landi",
                 message=f"Sizga {amount:,.0f} so'm ish haqi o'tkazildi",
@@ -121,6 +138,7 @@ class NotificationService:
                 reference_id=payment_id
             )
             self.db.commit()
+            manager.push_to_user(str(employee_user_id), self._notif_to_dict(notif))
 
     # ============ CRUD METODLARI ============
 
