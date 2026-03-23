@@ -6,7 +6,8 @@ from app.database import SessionLocal
 from app.services.audit_log_service import AuditLogService
 
 LOGGED_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
-SKIP_PATHS = {"/health", "/", "/docs", "/redoc", "/openapi.json"}
+SKIP_PATHS_EXACT = {"/health", "/", "/openapi.json"}
+SKIP_PATHS_PREFIX = {"/docs", "/redoc"}
 
 
 def _save_log(method, path, status_code, user_id, username, ip):
@@ -43,7 +44,8 @@ class AuditMiddleware:
 
         should_log = (
             method in LOGGED_METHODS
-            and not any(path.startswith(s) for s in SKIP_PATHS)
+            and path not in SKIP_PATHS_EXACT
+            and not any(path.startswith(s) for s in SKIP_PATHS_PREFIX)
         )
 
         status_code = 0
