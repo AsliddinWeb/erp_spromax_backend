@@ -56,7 +56,7 @@ class AuditMiddleware(BaseHTTPMiddleware):
         try:
             db = SessionLocal()
             try:
-                AuditLogService(db).create(
+                log = AuditLogService(db).create(
                     method=request.method,
                     path=path,
                     status_code=str(response.status_code),
@@ -65,9 +65,10 @@ class AuditMiddleware(BaseHTTPMiddleware):
                     request_body=body_text,
                     ip_address=ip,
                 )
+                print(f"AUDIT SAVED: {request.method} {path} user={username} id={log.id}", flush=True)
             finally:
                 db.close()
         except Exception as e:
-            print(f"AUDIT LOG ERROR: {e}", flush=True)
+            print(f"AUDIT LOG ERROR: {type(e).__name__}: {e}", flush=True)
 
         return response
