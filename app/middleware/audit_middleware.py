@@ -12,6 +12,7 @@ SKIP_PATHS = {"/health", "/", "/docs", "/redoc", "/openapi.json"}
 
 class AuditMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        print(f"AUDIT DISPATCH: {request.method} {request.url.path}", flush=True)
         response = await call_next(request)
 
         if request.method not in LOGGED_METHODS:
