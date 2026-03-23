@@ -9,7 +9,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-promax_erp}
       POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -44,7 +44,13 @@ services:
       dockerfile: Dockerfile
     container_name: promax_api
     restart: unless-stopped
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: >
+      sh -c "
+        echo 'Waiting for DB...' &&
+        alembic upgrade head &&
+        echo 'Migrations done. Starting server...' &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      "
     volumes:
       - .:/app
     ports:
@@ -67,6 +73,7 @@ services:
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
       - DEFAULT_PAGE_SIZE=${DEFAULT_PAGE_SIZE:-20}
       - MAX_PAGE_SIZE=${MAX_PAGE_SIZE:-100}
+      - TIMEZONE=${TIMEZONE:-Asia/Tashkent}
       - TZ=Asia/Tashkent
     networks:
       - promax_network

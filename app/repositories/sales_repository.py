@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, and_, desc
 from datetime import datetime, date
 from decimal import Decimal
+from app.utils.datetime_utils import get_today_start, get_month_start
 from uuid import UUID
 from app.models.sales import Customer, Order, OrderItem, Payment
 from app.repositories.base import BaseRepository
@@ -157,7 +158,7 @@ class OrderRepository(BaseRepository[Order]):
 
     def get_completed_today(self) -> int:
         """Bugun yetkazilgan buyurtmalar"""
-        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = get_today_start()
 
         return self.db.query(func.count(Order.id)).filter(
             Order.delivery_status == 'delivered',
@@ -181,7 +182,7 @@ class OrderRepository(BaseRepository[Order]):
 
     def get_revenue_today(self) -> Decimal:
         """Bugungi daromad"""
-        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = get_today_start()
 
         result = self.db.query(func.sum(Order.total_amount)).filter(
             Order.order_date >= today_start,

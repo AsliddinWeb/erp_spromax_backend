@@ -2,6 +2,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from datetime import datetime
 from decimal import Decimal
+from app.utils.datetime_utils import get_now
 from uuid import UUID
 from app.models.production import (
     ProductionLine,
@@ -189,7 +190,7 @@ class ProductionService:
             quantity_total=Decimal("0"),
             quantity_available=Decimal("0"),
             quantity_reserved=Decimal("0"),
-            last_updated=datetime.utcnow()
+            last_updated=get_now()
         )
         self.finished_stock_repo.create(stock)
 
@@ -312,7 +313,7 @@ class ProductionService:
                 equipment_status=handover_data.equipment_status,
                 pending_issues=handover_data.pending_issues,
                 next_shift_instructions=handover_data.next_shift_instructions,
-                handover_time=datetime.utcnow()
+                handover_time=get_now()
             )
             self.handover_repo.create(handover)
 
@@ -344,14 +345,14 @@ class ProductionService:
             shift_id=shift_id,
             raw_material_id=record_data.raw_material_id,
             quantity_used=record_data.quantity_used,
-            recorded_at=datetime.utcnow(),
+            recorded_at=get_now(),
             notes=record_data.notes
         )
         record = self.record_repo.create(new_record)
 
         # Warehouse stock kamaytirish
         stock.quantity -= record_data.quantity_used
-        stock.last_updated = datetime.utcnow()
+        stock.last_updated = get_now()
         self.db.commit()
 
         return record
@@ -381,7 +382,7 @@ class ProductionService:
             shift_id=shift_id,
             finished_product_id=output_data.finished_product_id,
             quantity_produced=output_data.quantity_produced,
-            produced_at=datetime.utcnow(),
+            produced_at=get_now(),
             notes=output_data.notes
         )
         output = self.output_repo.create(new_output)
@@ -433,7 +434,7 @@ class ProductionService:
             finished_product_id=defect_data.finished_product_id,
             defect_reason_id=defect_data.defect_reason_id,
             quantity=defect_data.quantity,
-            recorded_at=datetime.utcnow(),
+            recorded_at=get_now(),
             notes=defect_data.notes
         )
 
@@ -505,13 +506,13 @@ class ProductionService:
                 quantity_total=quantity,
                 quantity_available=quantity,
                 quantity_reserved=Decimal("0"),
-                last_updated=datetime.utcnow()
+                last_updated=get_now()
             )
             self.finished_stock_repo.create(stock)
         else:
             stock.quantity_total += quantity
             stock.quantity_available += quantity
-            stock.last_updated = datetime.utcnow()
+            stock.last_updated = get_now()
             self.db.commit()
 
     # ============ SHIFT PAUSE METHODS ============
@@ -532,7 +533,7 @@ class ProductionService:
 
         pause = ShiftPause(
             shift_id=shift_id,
-            paused_at=datetime.utcnow(),
+            paused_at=get_now(),
             reason=data.reason,
             notes=data.notes,
         )
@@ -551,7 +552,7 @@ class ProductionService:
         if not pause:
             raise BadRequestException(detail="To'xtatilgan pauza topilmadi")
 
-        pause.resumed_at = datetime.utcnow()
+        pause.resumed_at = get_now()
         self.db.commit()
         self.db.refresh(pause)
         return pause
@@ -610,7 +611,7 @@ class ProductionService:
                 detail=f"Yetarli brak yo'q. Mavjud: {brak_stock.quantity}, So'ralgan: {data.input_quantity}"
             )
 
-        now = datetime.utcnow()
+        now = get_now()
 
         # 2. Brak kamaytirish
         brak_stock.quantity -= data.input_quantity
@@ -680,7 +681,7 @@ class ProductionService:
             raise BadRequestException(detail="Faqat faol smenada material olish mumkin")
 
         stock_type = data.stock_type if hasattr(data, 'stock_type') and data.stock_type else 'recycled'
-        now = datetime.utcnow()
+        now = get_now()
 
         if stock_type == 'brak':
             # Brak — finished_product_id bo'yicha
@@ -824,13 +825,13 @@ class ProductionService:
                 finished_product_id=product_id,
                 stock_type=stock_type,
                 quantity=quantity,
-                last_updated=datetime.utcnow(),
+                last_updated=get_now(),
             )
             self.db.add(scrap)
             self.db.flush()
         else:
             scrap.quantity += quantity
-            scrap.last_updated = datetime.utcnow()
+            scrap.last_updated = get_now()
 
         txn_type = 'brak_in' if stock_type == 'brak' else 'recycled_in'
         txn = ScrapStockTransaction(
@@ -841,6 +842,6 @@ class ProductionService:
             quantity=quantity,
             shift_id=shift_id,
             notes=notes,
-            recorded_at=datetime.utcnow(),
+            recorded_at=get_now(),
         )
         self.db.add(txn)

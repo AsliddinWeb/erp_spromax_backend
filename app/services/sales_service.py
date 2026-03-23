@@ -2,6 +2,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from datetime import datetime
 from decimal import Decimal
+from app.utils.datetime_utils import get_now
 from uuid import UUID
 from app.models.sales import Customer, Order, OrderItem, Payment
 from app.schemas.sales import (
@@ -358,7 +359,7 @@ class SalesService:
 
         stock.quantity_available -= quantity
         stock.quantity_reserved += quantity
-        stock.last_updated = datetime.utcnow()
+        stock.last_updated = get_now()
         self.db.commit()
 
     def _fulfill_order(self, order_id: UUID):
@@ -372,7 +373,7 @@ class SalesService:
                 # Rezervdan total'ga o'tkazish
                 stock.quantity_reserved -= item.quantity
                 stock.quantity_total -= item.quantity
-                stock.last_updated = datetime.utcnow()
+                stock.last_updated = get_now()
 
         self.db.commit()
 
@@ -387,6 +388,6 @@ class SalesService:
                 # Rezervni qaytarish
                 stock.quantity_reserved -= item.quantity
                 stock.quantity_available += item.quantity
-                stock.last_updated = datetime.utcnow()
+                stock.last_updated = get_now()
 
         self.db.commit()

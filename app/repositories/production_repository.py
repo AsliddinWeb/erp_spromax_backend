@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, and_, desc
 from datetime import datetime, timedelta
 from decimal import Decimal
+from app.utils.datetime_utils import get_today_start
 from uuid import UUID
 from app.models.production import (
     ProductionLine,
@@ -104,7 +105,7 @@ class ShiftRepository(BaseRepository[Shift]):
     
     def get_completed_today(self) -> int:
         """Bugun tugallangan smenalar soni"""
-        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = get_today_start()
         
         return self.db.query(func.count(Shift.id)).filter(
             Shift.status == 'completed',
@@ -164,7 +165,7 @@ class ProductionOutputRepository(BaseRepository[ProductionOutput]):
     
     def get_total_output_today(self) -> Decimal:
         """Bugun ishlab chiqarilgan umumiy mahsulot"""
-        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = get_today_start()
         
         result = self.db.query(
             func.sum(ProductionOutput.quantity_produced)
@@ -215,7 +216,7 @@ class DefectiveProductRepository(BaseRepository[DefectiveProduct]):
     
     def get_total_defects_today(self) -> Decimal:
         """Bugüngi umumiy brak"""
-        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = get_today_start()
         
         result = self.db.query(
             func.sum(DefectiveProduct.quantity)

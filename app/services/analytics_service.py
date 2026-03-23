@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from datetime import date, datetime, timedelta
 from decimal import Decimal
+from app.utils.datetime_utils import get_now, get_today_start, get_month_start
 from app.schemas.analytics import (
     DashboardOverview,
     SalesAnalytics,
@@ -305,7 +306,7 @@ class AnalyticsService:
 
         # Finance
         start_dt = datetime.combine(month_start, datetime.min.time())
-        end_dt = datetime.now()
+        end_dt = get_now()
         total_income = self.transaction_repo.get_total_by_type('income', start_dt, end_dt)
         total_expense = self.transaction_repo.get_total_by_type('expense', start_dt, end_dt)
         net_profit = total_income - total_expense
@@ -332,7 +333,7 @@ class AnalyticsService:
 
     def _get_revenue_this_month(self) -> Decimal:
         """Oy boshidan daromad"""
-        month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        month_start = get_now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
         from app.models.sales import Order
 

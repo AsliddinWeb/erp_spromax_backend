@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, and_, or_
 from datetime import datetime, timedelta
 from decimal import Decimal
+from app.utils.datetime_utils import get_today_start, get_month_start
 from uuid import UUID
 from app.models.warehouse import (
     Supplier,
@@ -95,7 +96,7 @@ class WarehouseReceiptRepository(BaseRepository[WarehouseReceipt]):
 
     def get_total_value_this_month(self) -> Decimal:
         """Ushbu oydagi umumiy qabul qiymati"""
-        start_of_month = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        start_of_month = get_month_start()
 
         result = self.db.query(
             func.sum(WarehouseReceipt.total_price)
@@ -108,7 +109,7 @@ class WarehouseReceiptRepository(BaseRepository[WarehouseReceipt]):
 
     def get_count_this_month(self) -> int:
         """Ushbu oydagi qabul qilishlar soni"""
-        start_of_month = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        start_of_month = get_month_start()
 
         return self.db.query(func.count(WarehouseReceipt.id)).filter(
             WarehouseReceipt.receipt_date >= start_of_month,

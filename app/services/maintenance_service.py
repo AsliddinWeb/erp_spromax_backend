@@ -2,6 +2,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from datetime import datetime, date, timedelta
 from decimal import Decimal
+from app.utils.datetime_utils import get_now
 from uuid import UUID
 from app.models.maintenance import (
     MaintenanceRequest,
@@ -66,7 +67,7 @@ class MaintenanceService:
             priority=request_data.priority,
             description=request_data.description,
             status='pending',
-            requested_date=datetime.utcnow(),
+            requested_date=get_now(),
             scheduled_date=request_data.scheduled_date,
             requested_by=user_id
         )
@@ -132,7 +133,7 @@ class MaintenanceService:
             elif request_data.status == 'completed':
                 machine = self.machine_repo.get_by_id(request.machine_id)
                 machine.status = 'active'
-                request.completed_date = datetime.utcnow()
+                request.completed_date = get_now()
 
             self.db.commit()
 
@@ -152,7 +153,7 @@ class MaintenanceService:
 
         new_log = MaintenanceLog(
             request_id=log_data.request_id,
-            log_date=datetime.utcnow(),
+            log_date=get_now(),
             work_description=log_data.work_description,
             hours_spent=log_data.hours_spent,
             notes=log_data.notes,
@@ -226,7 +227,7 @@ class MaintenanceService:
             request_id=usage_data.request_id,
             spare_part_id=usage_data.spare_part_id,
             quantity_used=usage_data.quantity_used,
-            usage_date=datetime.utcnow(),
+            usage_date=get_now(),
             notes=usage_data.notes
         )
         usage = self.usage_repo.create(new_usage)

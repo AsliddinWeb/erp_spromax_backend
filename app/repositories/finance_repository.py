@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, and_, desc
 from datetime import datetime, timedelta
 from decimal import Decimal
+from app.utils.datetime_utils import get_today_start, get_month_start
 from uuid import UUID
 from app.models.finance import TransactionCategory, FinancialTransaction
 from app.repositories.base import BaseRepository
@@ -168,10 +169,10 @@ class FinancialTransactionRepository(BaseRepository[FinancialTransaction]):
 
     def get_today_total(self, transaction_type: str) -> Decimal:
         """Bugungi umumiy summa"""
-        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = get_today_start()
         return self.get_total_by_type(transaction_type, start_date=today_start)
 
     def get_month_total(self, transaction_type: str) -> Decimal:
         """Oy boshidan umumiy summa"""
-        month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        month_start = get_month_start()
         return self.get_total_by_type(transaction_type, start_date=month_start)

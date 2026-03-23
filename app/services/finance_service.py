@@ -2,6 +2,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from decimal import Decimal
+from app.utils.datetime_utils import get_now
 from uuid import UUID
 from app.models.finance import TransactionCategory, FinancialTransaction
 from app.schemas.finance import (
@@ -175,7 +176,7 @@ class FinanceService:
             category = self.category_repo.create(new_cat)
 
         new_transaction = FinancialTransaction(
-            transaction_date=datetime.utcnow(),
+            transaction_date=get_now(),
             transaction_type=transaction_type,
             amount=amount,
             category_id=category.id,

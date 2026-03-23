@@ -63,6 +63,7 @@ from app.models.maintenance import (
 )
 
 from app.models.notification import Notification
+from app.models.system_settings import SystemSettings
 
 # this is the Alembic Config object
 config = context.config

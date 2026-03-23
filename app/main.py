@@ -1,14 +1,42 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from app.config import settings
 from app.api.v1 import auth, users, warehouse, production, sales, finance, hr, maintenance, analytics, notifications
+from app.api.v1 import system_settings
+from app.utils.datetime_utils import set_timezone
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup: DB dan timezone ni o'qib qo'llash"""
+    # Default timezone ni config dan o'rnatish
+    set_timezone(settings.TIMEZONE)
+
+    # DB dan override qilish (agar system_settings jadval mavjud bo'lsa)
+    try:
+        from app.database import SessionLocal
+        from app.services.system_settings_service import SystemSettingsService
+        db = SessionLocal()
+        try:
+            service = SystemSettingsService(db)
+            service.initialize_defaults()
+            tz = service.load_timezone_from_db()
+        finally:
+            db.close()
+    except Exception:
+        pass  # Jadval hali yaratilmagan bo'lishi mumkin
+
+    yield
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
     debug=settings.DEBUG,
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # CORS middleware
@@ -31,6 +59,7 @@ app.include_router(hr.router, prefix=settings.API_V1_PREFIX)
 app.include_router(maintenance.router, prefix=settings.API_V1_PREFIX)
 app.include_router(analytics.router, prefix=settings.API_V1_PREFIX)
 app.include_router(notifications.router, prefix=settings.API_V1_PREFIX)
+app.include_router(system_settings.router, prefix=settings.API_V1_PREFIX)
 
 
 def custom_openapi():

@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, and_, desc
 from datetime import date, datetime
 from decimal import Decimal
+from app.utils.datetime_utils import get_today_start, get_month_start
 from uuid import UUID
 from app.models.hr import Department, Employee, Attendance, SalaryPayment, LeaveRequest
 from app.repositories.base import BaseRepository
@@ -163,7 +164,7 @@ class SalaryPaymentRepository(BaseRepository[SalaryPayment]):
     
     def get_total_paid_this_month(self) -> Decimal:
         """Shu oy to'langan ish haqi"""
-        month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0).date()
+        month_start = get_month_start().date()
         
         result = self.db.query(func.sum(SalaryPayment.total_amount)).filter(
             SalaryPayment.payment_date >= month_start,

@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     # Pagination
     DEFAULT_PAGE_SIZE: int = 20
     MAX_PAGE_SIZE: int = 100
+
+    # Timezone
+    TIMEZONE: str = "Asia/Tashkent"
     
     @property
     def allowed_origins_list(self) -> List[str]:

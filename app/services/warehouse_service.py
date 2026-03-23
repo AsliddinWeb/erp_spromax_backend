@@ -2,6 +2,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from datetime import datetime
 from decimal import Decimal
+from app.utils.datetime_utils import get_now
 from uuid import UUID
 from app.models.warehouse import (
     Supplier,
@@ -110,7 +111,7 @@ class WarehouseService:
         stock = WarehouseStock(
             raw_material_id=material.id,
             quantity=Decimal("0"),
-            last_updated=datetime.utcnow()
+            last_updated=get_now()
         )
         self.stock_repo.create(stock)
 
@@ -244,7 +245,7 @@ class WarehouseService:
             requested_quantity=request_data.requested_quantity,
             request_status=RequestStatus.PENDING.value,
             requested_by=user_id,
-            request_date=datetime.utcnow(),
+            request_date=get_now(),
             notes=request_data.notes
         )
 
@@ -299,7 +300,7 @@ class WarehouseService:
 
         request.approved_quantity = approve_data.approved_quantity
         request.approved_by = user_id
-        request.approval_date = datetime.utcnow()
+        request.approval_date = get_now()
         if approve_data.notes:
             request.notes = approve_data.notes
 
@@ -328,7 +329,7 @@ class WarehouseService:
         # Rad etish
         request.request_status = RequestStatus.REJECTED.value
         request.approved_by = user_id
-        request.approval_date = datetime.utcnow()
+        request.approval_date = get_now()
         request.rejection_reason = reject_data.rejection_reason
 
         self.db.commit()
@@ -378,13 +379,13 @@ class WarehouseService:
             stock = WarehouseStock(
                 raw_material_id=material_id,
                 quantity=quantity,
-                last_updated=datetime.utcnow()
+                last_updated=get_now()
             )
             self.stock_repo.create(stock)
         else:
             # Mavjud stockni yangilash
             stock.quantity += quantity
-            stock.last_updated = datetime.utcnow()
+            stock.last_updated = get_now()
             self.db.commit()
 
     def _update_stock_subtract(self, material_id: UUID, quantity: Decimal):
@@ -395,7 +396,7 @@ class WarehouseService:
             raise InsufficientStockException(detail="Omborda yetarli xom-ashyo yo'q")
 
         stock.quantity -= quantity
-        stock.last_updated = datetime.utcnow()
+        stock.last_updated = get_now()
         self.db.commit()
 
         # Low stock tekshirish va bildirishnoma
