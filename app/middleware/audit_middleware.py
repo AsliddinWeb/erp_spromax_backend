@@ -1,4 +1,3 @@
-import json
 import uuid
 import threading
 from starlette.types import ASGIApp, Receive, Scope, Send
@@ -11,7 +10,6 @@ SKIP_PATHS = {"/health", "/", "/docs", "/redoc", "/openapi.json"}
 
 
 def _save_log(method, path, status_code, user_id, username, ip):
-    print(f"_save_log called: {method} {path} status={status_code} user={username}", flush=True)
     try:
         db = SessionLocal()
         try:
@@ -41,7 +39,6 @@ class AuditMiddleware:
 
         method = scope.get("method", "")
         path = scope.get("path", "")
-        print(f"NEW_AUDIT __call__: {method} {path}", flush=True)
 
         should_log = (
             method in LOGGED_METHODS
@@ -56,49 +53,40 @@ class AuditMiddleware:
                 status_code = message.get("status", 0)
             await send(message)
 
+        exc_to_raise = None
         try:
             await self.app(scope, receive, send_wrapper if should_log else send)
-        except Exception as e:
-            print(f"AUDIT APP ERROR: {type(e).__name__}: {e}", flush=True)
-            raise
+        except BaseException as e:
+            exc_to_raise = e
 
-        if not should_log:
-            return
+        # Log saqlash (exception bo'lsa ham, bo'lmasa ham)
+        if should_log and status_code:
+            user_id = None
+            username = None
+            ip = None
+            try:
+                headers = dict(scope.get("headers", []))
+                auth = headers.get(b"authorization", b"").decode("utf-8", errors="ignore")
+                if auth.startswith("Bearer "):
+                    token = auth.split(" ", 1)[1]
+                    payload = decode_token(token)
+                    if payload:
+                        raw_id = payload.get("sub")
+                        try:
+                            user_id = uuid.UUID(str(raw_id)) if raw_id else None
+                        except Exception:
+                            user_id = None
+                        username = payload.get("username")
+                client = scope.get("client")
+                ip = client[0] if client else None
+            except Exception:
+                pass
 
-        print(f"AUDIT AFTER APP: {method} {path} status={status_code}", flush=True)
+            threading.Thread(
+                target=_save_log,
+                args=(method, path, status_code, user_id, username, ip),
+                daemon=True,
+            ).start()
 
-        # Token dan user ma'lumotlarini olish
-        user_id = None
-        username = None
-        try:
-            headers = dict(scope.get("headers", []))
-            auth = headers.get(b"authorization", b"").decode("utf-8", errors="ignore")
-            if auth.startswith("Bearer "):
-                token = auth.split(" ", 1)[1]
-                payload = decode_token(token)
-                if payload:
-                    raw_id = payload.get("sub")
-                    try:
-                        user_id = uuid.UUID(str(raw_id)) if raw_id else None
-                    except Exception:
-                        user_id = None
-                    username = payload.get("username")
-        except Exception:
-            pass
-
-        # IP manzil
-        ip = None
-        try:
-            client = scope.get("client")
-            ip = client[0] if client else None
-        except Exception:
-            pass
-
-        print(f"AUDIT THREAD START: {method} {path}", flush=True)
-        # Alohida threadda saqlaymiz (response allaqachon yuborilgan)
-        t = threading.Thread(
-            target=_save_log,
-            args=(method, path, status_code, user_id, username, ip),
-            daemon=True,
-        )
-        t.start()
+        if exc_to_raise is not None:
+            raise exc_to_raise
