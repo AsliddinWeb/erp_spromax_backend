@@ -69,7 +69,7 @@ class AuditMiddleware(BaseHTTPMiddleware):
                 print(f"AUDIT SAVED: {request.method} {path} user={username} id={log.id}", flush=True)
             finally:
                 db.close()
-        except Exception as e:
+        except BaseException as e:
             print(f"AUDIT LOG ERROR: {type(e).__name__}: {e}", flush=True)
 
         return response
