@@ -68,9 +68,16 @@ class EmployeeUpdate(BaseSchema):
     user_id: Optional[UUID] = None
 
 
+class LinkedUserResponse(BaseIDSchema):
+    username: str
+    full_name: str
+    email: str
+    phone: Optional[str] = None
+
+
 class EmployeeResponse(BaseIDSchema, EmployeeBase):
     department: Optional[DepartmentResponse] = None
-    user: Optional[dict] = None
+    user: Optional[LinkedUserResponse] = None
 
 
 # ============ ATTENDANCE SCHEMAS ============
