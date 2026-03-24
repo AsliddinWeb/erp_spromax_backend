@@ -651,6 +651,9 @@ class ProductionService:
         stock = self.db.query(ScrapStock).filter(ScrapStock.id == stock_id).first()
         if not stock:
             raise NotFoundException(detail="Atxot yozuvi topilmadi")
+        self.db.query(ScrapStockTransaction).filter(
+            ScrapStockTransaction.scrap_stock_id == stock_id
+        ).delete(synchronize_session=False)
         self.db.delete(stock)
         self.db.commit()
         return {"message": "O'chirildi"}
