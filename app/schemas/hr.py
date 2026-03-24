@@ -65,6 +65,7 @@ class EmployeeUpdate(BaseSchema):
     position: Optional[str] = Field(None, min_length=1, max_length=100)
     salary: Optional[Decimal] = Field(None, gt=0)
     employment_status: Optional[str] = Field(None, pattern="^(active|on_leave|terminated)$")
+    user_id: Optional[UUID] = None
 
 
 class EmployeeResponse(BaseIDSchema, EmployeeBase):
