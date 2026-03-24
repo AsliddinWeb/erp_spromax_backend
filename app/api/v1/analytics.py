@@ -35,14 +35,15 @@ async def get_dashboard(
 
     Barcha modullardan umumiy ko'rsatkichlar.
     """
-    cache_key = f"analytics:dashboard:{date.today()}"
+    from datetime import datetime
+    cache_key = f"analytics:dashboard:{datetime.now().strftime('%Y-%m-%d-%H-%M')}"
     cached = cache_get(cache_key)
     if cached is not None:
         return cached
 
     service = AnalyticsService(db)
     result = service.get_dashboard_overview()
-    cache_set(cache_key, jsonable_encoder(result), ttl=300)
+    cache_set(cache_key, jsonable_encoder(result), ttl=60)
     return result
 
 

@@ -13,6 +13,7 @@ from app.services.sales_service import SalesService
 from app.dependencies import get_current_user, require_permission, require_admin
 from app.models.user import User
 from app.core.constants import PermissionType
+from app.core.cache import cache_delete_pattern
 
 router = APIRouter(prefix="/sales", tags=["Sales"])
 
@@ -95,7 +96,9 @@ async def create_order(
         current_user: User = Depends(require_permission(PermissionType.WRITE_SALES))
 ):
     service = SalesService(db)
-    return service.create_order(order_data, current_user.id)
+    result = service.create_order(order_data, current_user.id)
+    cache_delete_pattern("analytics:dashboard:*")
+    return result
 
 
 @router.get("/orders", response_model=List[OrderResponse])
