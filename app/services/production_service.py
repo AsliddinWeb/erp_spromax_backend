@@ -635,6 +635,26 @@ class ProductionService:
             joinedload(ScrapStock.raw_material),
         ).order_by(ScrapStock.stock_type).all()
 
+    def delete_finished_stock(self, stock_id) -> dict:
+        """Tayyor mahsulot ombori yozuvini o'chirish"""
+        from app.core.exceptions import NotFoundException
+        stock = self.db.query(FinishedProductStock).filter(FinishedProductStock.id == stock_id).first()
+        if not stock:
+            raise NotFoundException(detail="Zaxira topilmadi")
+        self.db.delete(stock)
+        self.db.commit()
+        return {"message": "O'chirildi"}
+
+    def delete_scrap_stock(self, stock_id) -> dict:
+        """Atxot sklad yozuvini o'chirish"""
+        from app.core.exceptions import NotFoundException
+        stock = self.db.query(ScrapStock).filter(ScrapStock.id == stock_id).first()
+        if not stock:
+            raise NotFoundException(detail="Atxot yozuvi topilmadi")
+        self.db.delete(stock)
+        self.db.commit()
+        return {"message": "O'chirildi"}
+
     def get_scrap_transactions(self, product_id=None, stock_type=None) -> List[ScrapStockTransaction]:
         """Atxot tarixi"""
         from sqlalchemy.orm import joinedload

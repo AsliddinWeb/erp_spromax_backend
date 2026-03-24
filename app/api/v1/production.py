@@ -626,6 +626,20 @@ async def get_finished_stock(
     return service.get_all_finished_stock()
 
 
+@router.delete("/finished-stock/{stock_id}", status_code=status.HTTP_200_OK)
+async def delete_finished_stock(
+        stock_id: UUID,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_admin)
+):
+    """Tayyor mahsulot ombori yozuvini o'chirish (faqat superadmin)"""
+    from app.core.exceptions import ForbiddenException
+    if current_user.role.name != "superadmin":
+        raise ForbiddenException(detail="Faqat superadmin o'chira oladi")
+    service = ProductionService(db)
+    return service.delete_finished_stock(stock_id)
+
+
 # ============ SCRAP STOCK ENDPOINTS ============
 
 @router.get("/scrap-stock", response_model=List[ScrapStockResponse])
@@ -647,6 +661,20 @@ async def get_scrap_transactions(
     """Atxot sklad harakatlari tarixi"""
     service = ProductionService(db)
     return service.get_scrap_transactions(product_id)
+
+
+@router.delete("/scrap-stock/{stock_id}", status_code=status.HTTP_200_OK)
+async def delete_scrap_stock(
+        stock_id: UUID,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_admin)
+):
+    """Atxot sklad yozuvini o'chirish (faqat superadmin)"""
+    from app.core.exceptions import ForbiddenException
+    if current_user.role.name != "superadmin":
+        raise ForbiddenException(detail="Faqat superadmin o'chira oladi")
+    service = ProductionService(db)
+    return service.delete_scrap_stock(stock_id)
 
 
 @router.post("/scrap-stock/transfer-to-grinder")
