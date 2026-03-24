@@ -244,6 +244,20 @@ async def get_stock_by_material(
     return service.get_stock_by_material(material_id)
 
 
+@router.delete("/stock/{stock_id}", status_code=status.HTTP_200_OK)
+async def delete_stock(
+        stock_id: UUID,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_admin)
+):
+    """Zaxira o'chirish (faqat superadmin)"""
+    from app.core.exceptions import ForbiddenException
+    if current_user.role.value != "superadmin":
+        raise ForbiddenException(detail="Faqat superadmin o'chira oladi")
+    service = WarehouseService(db)
+    return service.delete_stock(stock_id)
+
+
 @router.get("/low-stock", response_model=List[LowStockItem])
 async def get_low_stock(
         db: Session = Depends(get_db),

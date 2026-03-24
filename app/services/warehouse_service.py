@@ -230,6 +230,16 @@ class WarehouseService:
         """Barcha qoldiqlar"""
         return self.stock_repo.get_all_with_materials(skip=skip, limit=limit)
 
+    def delete_stock(self, stock_id: UUID):
+        """Zaxira yozuvini o'chirish (faqat superadmin)"""
+        from app.core.exceptions import NotFoundException
+        stock = self.db.query(WarehouseStock).filter(WarehouseStock.id == stock_id).first()
+        if not stock:
+            raise NotFoundException(detail="Zaxira topilmadi")
+        self.db.delete(stock)
+        self.db.commit()
+        return {"message": "O'chirildi"}
+
     def get_low_stock_items(self) -> List[LowStockItem]:
         """Kam qoldiqlar"""
         items = self.stock_repo.get_low_stock_items()
