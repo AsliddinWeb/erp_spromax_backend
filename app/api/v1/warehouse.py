@@ -252,7 +252,7 @@ async def delete_stock(
 ):
     """Zaxira o'chirish (faqat superadmin)"""
     from app.core.exceptions import ForbiddenException
-    if str(current_user.role) != "superadmin":
+    if current_user.role.name != "superadmin":
         raise ForbiddenException(detail="Faqat superadmin o'chira oladi")
     service = WarehouseService(db)
     return service.delete_stock(stock_id)
