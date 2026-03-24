@@ -172,6 +172,21 @@ class MaterialRequestResponse(BaseIDSchema):
 
     model_config = {"from_attributes": True}
 
+# ============ PRODUCTION GOODS RECEIPT SCHEMAS ============
+
+class ProductionGoodsReceiptResponse(BaseSchema):
+    id: UUID
+    finished_product_id: UUID
+    shift_id: Optional[UUID] = None
+    quantity: Decimal
+    status: str
+    received_at: datetime
+    notes: Optional[str] = None
+    finished_product: Optional[dict] = None
+
+    model_config = {"from_attributes": True}
+
+
 # ============ STATISTICS SCHEMAS ============
 
 class WarehouseStatistics(BaseSchema):

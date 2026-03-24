@@ -24,7 +24,9 @@ from app.schemas.warehouse import (
     MaterialRequestReject,
     MaterialRequestResponse,
     # Statistics
-    WarehouseStatistics
+    WarehouseStatistics,
+    # Production receipts
+    ProductionGoodsReceiptResponse
 )
 from app.services.warehouse_service import WarehouseService
 from app.dependencies import get_current_user, require_permission, require_admin
@@ -359,3 +361,44 @@ async def get_statistics(
     """Ombor statistikasi"""
     service = WarehouseService(db)
     return service.get_statistics()
+
+
+# ============ PRODUCTION GOODS RECEIPTS ============
+
+@router.get("/production-receipts")
+async def get_production_receipts(
+        skip: int = Query(0, ge=0),
+        limit: int = Query(50, ge=1, le=100),
+        page: int = Query(1, ge=1),
+        db: Session = Depends(get_db),
+        current_user: User = Depends(require_permission(PermissionType.READ_WAREHOUSE))
+):
+    """Ishlab chiqarishdan kelgan tayyor mahsulotlar qabuli"""
+    from sqlalchemy import desc
+    from app.models.warehouse import ProductionGoodsReceipt
+    from app.models.production import FinishedProduct, Shift
+
+    actual_skip = (page - 1) * limit if page > 1 else skip
+    rows = (
+        db.query(ProductionGoodsReceipt)
+        .filter(ProductionGoodsReceipt.is_active == True)
+        .order_by(desc(ProductionGoodsReceipt.received_at))
+        .offset(actual_skip).limit(limit).all()
+    )
+    total = db.query(ProductionGoodsReceipt).filter(ProductionGoodsReceipt.is_active == True).count()
+
+    result = []
+    for r in rows:
+        product = db.query(FinishedProduct).filter(FinishedProduct.id == r.finished_product_id).first()
+        result.append({
+            "id": str(r.id),
+            "finished_product_id": str(r.finished_product_id),
+            "shift_id": str(r.shift_id) if r.shift_id else None,
+            "quantity": float(r.quantity),
+            "status": r.status,
+            "received_at": r.received_at,
+            "notes": r.notes,
+            "finished_product": {"id": str(product.id), "name": product.name, "unit": product.unit} if product else None,
+        })
+
+    return {"items": result, "total": total, "page": page, "limit": limit}

@@ -372,7 +372,7 @@ async def record_material_usage(
     Operator ishlab chiqarish jarayonida qancha xom-ashyo ishlatganini yozadi.
     """
     service = ProductionService(db)
-    return service.record_material_usage(shift_id, record_data)
+    return service.record_material_usage(shift_id, record_data, current_user.id)
 
 
 @router.get("/shifts/{shift_id}/records/materials", response_model=List[ProductionRecordResponse])

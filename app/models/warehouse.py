@@ -99,3 +99,22 @@ class MaterialRequest(BaseModel):
     
     def __repr__(self):
         return f"<MaterialRequest {self.id}: {self.request_status}>"
+
+
+class ProductionGoodsReceipt(BaseModel):
+    """Ishlab chiqarishdan kelgan tayyor mahsulotlar qabuli"""
+    __tablename__ = "production_goods_receipts"
+
+    finished_product_id = Column(UUID(as_uuid=True), ForeignKey('finished_products.id'), nullable=False)
+    shift_id = Column(UUID(as_uuid=True), ForeignKey('shifts.id'), nullable=True)
+    quantity = Column(Numeric(10, 2), nullable=False)
+    status = Column(String(20), nullable=False, default='approved')  # always approved
+    received_at = Column(DateTime, nullable=False)
+    notes = Column(Text, nullable=True)
+
+    # Relationships
+    finished_product = relationship("FinishedProduct")
+    shift = relationship("Shift")
+
+    def __repr__(self):
+        return f"<ProductionGoodsReceipt {self.id}: {self.quantity}>"

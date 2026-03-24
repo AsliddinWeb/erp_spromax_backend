@@ -64,6 +64,7 @@ from app.core.exceptions import (
     InsufficientStockException
 )
 from app.utils.helpers import calculate_efficiency
+from app.core.constants import UserRole
 
 
 class ProductionService:
@@ -332,7 +333,8 @@ class ProductionService:
     def record_material_usage(
             self,
             shift_id: UUID,
-            record_data: ProductionRecordCreate
+            record_data: ProductionRecordCreate,
+            user_id: UUID = None,
     ) -> ProductionRecord:
         """Xom-ashyo ishlatishni yozish"""
         # Smena tekshirish
@@ -360,6 +362,24 @@ class ProductionService:
         # Warehouse stock kamaytirish
         stock.quantity -= record_data.quantity_used
         stock.last_updated = get_now()
+
+        # Avto tasdiqlangan MaterialRequest yaratish (So'rovlar tabida ko'rinadi)
+        if user_id:
+            from app.models.warehouse import MaterialRequest
+            now = get_now()
+            mat_request = MaterialRequest(
+                raw_material_id=record_data.raw_material_id,
+                requested_quantity=record_data.quantity_used,
+                approved_quantity=record_data.quantity_used,
+                request_status='approved',
+                requested_by=user_id,
+                approved_by=user_id,
+                request_date=now,
+                approval_date=now,
+                notes=record_data.notes or "Ishlab chiqarish smenasidan avto so'rov",
+            )
+            self.db.add(mat_request)
+
         self.db.commit()
 
         return record
@@ -842,6 +862,41 @@ class ProductionService:
 
         self.db.commit()
         self.db.refresh(shift)
+
+        # Tayyor mahsulotlar: ombor qabuli + bildirishnoma
+        produced_items = [item for item in data.outputs if item.quantity_produced > 0]
+        if produced_items:
+            from app.models.warehouse import ProductionGoodsReceipt
+            from app.services.notification_service import NotificationService
+            product_lines = []
+            for item in produced_items:
+                product = self.db.query(FinishedProduct).filter(
+                    FinishedProduct.id == item.finished_product_id
+                ).first()
+                # Ombor qabuli yozuvi (avto tasdiqlangan)
+                receipt = ProductionGoodsReceipt(
+                    finished_product_id=item.finished_product_id,
+                    shift_id=shift_id,
+                    quantity=item.quantity_produced,
+                    status='approved',
+                    received_at=data.end_time,
+                    notes=item.notes,
+                )
+                self.db.add(receipt)
+                name = product.name if product else str(item.finished_product_id)
+                product_lines.append(f"{name}: {item.quantity_produced}")
+            self.db.commit()
+            summary = ", ".join(product_lines)
+            notif_service = NotificationService(self.db)
+            notif_service.notify_roles(
+                roles=[UserRole.WAREHOUSE_MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN],
+                title="Ishlab chiqarishdan mahsulot qabul qilindi",
+                message=f"Smena yopildi. Omborga qo'shildi: {summary}",
+                notif_type="order",
+                reference_type="shift",
+                reference_id=shift_id,
+            )
+
         return shift
 
     def _update_scrap_stock_add(
