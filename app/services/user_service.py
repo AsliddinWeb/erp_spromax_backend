@@ -85,8 +85,17 @@ class UserService:
         return self.user_repo.update(user, update_data)
 
     def delete_user(self, user_id: UUID) -> bool:
-        """Foydalanuvchini o'chirish"""
-        return self.user_repo.delete(user_id)
+        """Foydalanuvchini o'chirish (hard delete)"""
+        from sqlalchemy import text
+        user = self.user_repo.get_by_id_any(user_id)
+        if not user:
+            from app.core.exceptions import NotFoundException
+            raise NotFoundException(detail="Foydalanuvchi topilmadi")
+        self.db.execute(text("DELETE FROM notifications WHERE user_id = :uid"), {"uid": str(user_id)})
+        self.db.execute(text("DELETE FROM audit_logs WHERE user_id = :uid"), {"uid": str(user_id)})
+        self.db.execute(text("DELETE FROM users WHERE id = :uid"), {"uid": str(user_id)})
+        self.db.commit()
+        return True
     
     def get_user_count(self) -> int:
         """Foydalanuvchilar sonini olish"""
