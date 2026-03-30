@@ -123,7 +123,19 @@ class ProductionService:
 
     def delete_production_line(self, line_id: UUID) -> bool:
         """Liniya o'chirish (hard delete)"""
-        return self.line_repo.hard_delete(line_id)
+        from app.models.production import Machine, Shift
+        line = self.line_repo.get_by_id_any(line_id)
+        if not line:
+            raise NotFoundException(detail="Liniya topilmadi")
+        self.db.query(Machine).filter(Machine.production_line_id == line_id).update(
+            {"is_active": False}, synchronize_session=False
+        )
+        self.db.query(Shift).filter(Shift.production_line_id == line_id).update(
+            {"is_active": False}, synchronize_session=False
+        )
+        self.db.delete(line)
+        self.db.commit()
+        return True
 
     # ============ MACHINE METHODS ============
 
