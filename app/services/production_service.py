@@ -109,7 +109,9 @@ class ProductionService:
 
     def update_production_line(self, line_id: UUID, line_data: ProductionLineUpdate) -> ProductionLine:
         """Liniya yangilash"""
-        line = self.get_production_line(line_id)
+        line = self.line_repo.get_by_id_any(line_id)
+        if not line:
+            raise NotFoundException(detail="Liniya topilmadi")
 
         if line_data.name and line_data.name != line.name:
             existing = self.line_repo.get_by_name(line_data.name)

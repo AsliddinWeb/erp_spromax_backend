@@ -21,6 +21,12 @@ class BaseRepository(Generic[ModelType]):
             self.model.is_active == True
         ).first()
     
+    def get_by_id_any(self, id: UUID) -> Optional[ModelType]:
+        """ID bo'yicha olish (is_active hisobga olinmaydi)"""
+        return self.db.query(self.model).filter(
+            self.model.id == id
+        ).first()
+
     def get_all(self, skip: int = 0, limit: int = 100) -> List[ModelType]:
         """Barchasini olish (pagination bilan)"""
         return self.db.query(self.model).filter(
