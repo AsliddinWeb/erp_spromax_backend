@@ -94,7 +94,7 @@ class UserService:
         self.db.execute(text("DELETE FROM notifications WHERE user_id = :uid"), {"uid": str(user_id)})
         self.db.execute(text("UPDATE audit_logs SET user_id = NULL WHERE user_id = :uid"), {"uid": str(user_id)})
         self.db.execute(text("UPDATE material_requests SET approved_by = NULL WHERE approved_by = :uid"), {"uid": str(user_id)})
-        self.db.execute(text("UPDATE material_requests SET requested_by = NULL WHERE requested_by = :uid"), {"uid": str(user_id)})
+        self.db.execute(text("DELETE FROM material_requests WHERE requested_by = :uid"), {"uid": str(user_id)})
         self.db.execute(text("UPDATE salary_payments SET paid_by = NULL WHERE paid_by = :uid"), {"uid": str(user_id)})
         self.db.execute(text("DELETE FROM users WHERE id = :uid"), {"uid": str(user_id)})
         self.db.commit()
