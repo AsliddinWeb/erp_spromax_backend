@@ -122,21 +122,28 @@ class ProductionService:
         return self.line_repo.update(line, update_data)
 
     def delete_production_line(self, line_id: UUID) -> bool:
-        """Liniya o'chirish (hard delete)"""
+        """Liniya o'chirish (hard delete, cascade)"""
         from sqlalchemy import text
+        lid = str(line_id)
         line = self.line_repo.get_by_id_any(line_id)
         if not line:
             raise NotFoundException(detail="Liniya topilmadi")
-        # Bog'liq jadvallarni ketma-ket tozalash
-        self.db.execute(text("""
-            DELETE FROM shift_machines
-            WHERE machine_id IN (
-                SELECT id FROM machines WHERE production_line_id = :line_id
-            )
-        """), {"line_id": str(line_id)})
-        self.db.execute(text("DELETE FROM machines WHERE production_line_id = :line_id"), {"line_id": str(line_id)})
-        self.db.execute(text("DELETE FROM shifts WHERE production_line_id = :line_id"), {"line_id": str(line_id)})
-        self.db.execute(text("DELETE FROM production_lines WHERE id = :line_id"), {"line_id": str(line_id)})
+
+        # Mashinalar bilan bog'liq
+        self.db.execute(text("DELETE FROM shift_machines WHERE machine_id IN (SELECT id FROM machines WHERE production_line_id = :l)"), {"l": lid})
+        self.db.execute(text("DELETE FROM maintenance_logs WHERE request_id IN (SELECT id FROM maintenance_requests WHERE machine_id IN (SELECT id FROM machines WHERE production_line_id = :l))"), {"l": lid})
+        self.db.execute(text("DELETE FROM maintenance_requests WHERE machine_id IN (SELECT id FROM machines WHERE production_line_id = :l)"), {"l": lid})
+        self.db.execute(text("DELETE FROM machines WHERE production_line_id = :l"), {"l": lid})
+
+        # Smenalar bilan bog'liq
+        self.db.execute(text("DELETE FROM defective_products WHERE shift_id IN (SELECT id FROM shifts WHERE production_line_id = :l)"), {"l": lid})
+        self.db.execute(text("DELETE FROM production_records WHERE shift_id IN (SELECT id FROM shifts WHERE production_line_id = :l)"), {"l": lid})
+        self.db.execute(text("DELETE FROM production_outputs WHERE shift_id IN (SELECT id FROM shifts WHERE production_line_id = :l)"), {"l": lid})
+        self.db.execute(text("DELETE FROM shift_handovers WHERE shift_id IN (SELECT id FROM shifts WHERE production_line_id = :l)"), {"l": lid})
+        self.db.execute(text("DELETE FROM shift_machines WHERE shift_id IN (SELECT id FROM shifts WHERE production_line_id = :l)"), {"l": lid})
+        self.db.execute(text("DELETE FROM shifts WHERE production_line_id = :l"), {"l": lid})
+
+        self.db.execute(text("DELETE FROM production_lines WHERE id = :l"), {"l": lid})
         self.db.commit()
         return True
 
