@@ -188,8 +188,15 @@ class ProductionService:
         return self.machine_repo.update(machine, update_data)
 
     def delete_machine(self, machine_id: UUID) -> bool:
-        """Mashina o'chirish"""
-        return self.machine_repo.delete(machine_id)
+        """Mashina o'chirish (hard delete)"""
+        from sqlalchemy import text
+        machine = self.machine_repo.get_by_id_any(machine_id)
+        if not machine:
+            raise NotFoundException(detail="Mashina topilmadi")
+        self.db.execute(text("DELETE FROM shift_machines WHERE machine_id = :mid"), {"mid": str(machine_id)})
+        self.db.execute(text("DELETE FROM machines WHERE id = :mid"), {"mid": str(machine_id)})
+        self.db.commit()
+        return True
 
     # ============ FINISHED PRODUCT METHODS ============
 
