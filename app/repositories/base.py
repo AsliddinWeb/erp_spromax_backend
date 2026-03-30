@@ -65,7 +65,7 @@ class BaseRepository(Generic[ModelType]):
     
     def hard_delete(self, id: UUID) -> bool:
         """O'chirish (hard delete)"""
-        db_obj = self.get_by_id(id)
+        db_obj = self.get_by_id_any(id)
         if db_obj:
             self.db.delete(db_obj)
             self.db.commit()

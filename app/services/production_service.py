@@ -122,8 +122,8 @@ class ProductionService:
         return self.line_repo.update(line, update_data)
 
     def delete_production_line(self, line_id: UUID) -> bool:
-        """Liniya o'chirish"""
-        return self.line_repo.delete(line_id)
+        """Liniya o'chirish (hard delete)"""
+        return self.line_repo.hard_delete(line_id)
 
     # ============ MACHINE METHODS ============
 
