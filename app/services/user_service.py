@@ -92,7 +92,10 @@ class UserService:
             from app.core.exceptions import NotFoundException
             raise NotFoundException(detail="Foydalanuvchi topilmadi")
         self.db.execute(text("DELETE FROM notifications WHERE user_id = :uid"), {"uid": str(user_id)})
-        self.db.execute(text("DELETE FROM audit_logs WHERE user_id = :uid"), {"uid": str(user_id)})
+        self.db.execute(text("UPDATE audit_logs SET user_id = NULL WHERE user_id = :uid"), {"uid": str(user_id)})
+        self.db.execute(text("UPDATE material_requests SET approved_by = NULL WHERE approved_by = :uid"), {"uid": str(user_id)})
+        self.db.execute(text("UPDATE material_requests SET requester_id = NULL WHERE requester_id = :uid"), {"uid": str(user_id)})
+        self.db.execute(text("UPDATE salary_payments SET paid_by = NULL WHERE paid_by = :uid"), {"uid": str(user_id)})
         self.db.execute(text("DELETE FROM users WHERE id = :uid"), {"uid": str(user_id)})
         self.db.commit()
         return True
