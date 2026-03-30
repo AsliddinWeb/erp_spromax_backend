@@ -141,6 +141,7 @@ class ProductionService:
         self.db.execute(text("DELETE FROM production_outputs WHERE shift_id IN (SELECT id FROM shifts WHERE production_line_id = :l)"), {"l": lid})
         self.db.execute(text("DELETE FROM shift_handovers WHERE shift_id IN (SELECT id FROM shifts WHERE production_line_id = :l)"), {"l": lid})
         self.db.execute(text("DELETE FROM shift_machines WHERE shift_id IN (SELECT id FROM shifts WHERE production_line_id = :l)"), {"l": lid})
+        self.db.execute(text("DELETE FROM shift_scrap_usage WHERE shift_id IN (SELECT id FROM shifts WHERE production_line_id = :l)"), {"l": lid})
         self.db.execute(text("DELETE FROM shifts WHERE production_line_id = :l"), {"l": lid})
 
         self.db.execute(text("DELETE FROM production_lines WHERE id = :l"), {"l": lid})
